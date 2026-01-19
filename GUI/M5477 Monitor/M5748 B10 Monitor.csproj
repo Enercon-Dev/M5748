@@ -1,0 +1,225 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3769662C-577A-483D-990F-949985DDDAF2}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>M5477_Monitor</RootNamespace>
+    <AssemblyName>M5478 B10 Monitor</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DataLogForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DataLogForm.Designer.cs">
+      <DependentUpon>DataLogForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="db.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DeviceStatistics.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="DeviceStatistics.Designer.cs">
+      <DependentUpon>DeviceStatistics.cs</DependentUpon>
+    </Compile>
+    <Compile Include="M1787Frame.cs" />
+    <Compile Include="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\AnalogTelLable.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\AnalogTelLable.Designer.cs">
+      <DependentUpon>AnalogTelLable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\AnalogTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\AnalogTextBox.Designer.cs">
+      <DependentUpon>AnalogTextBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\BinarySerialPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\BinarySerialPort.Designer.cs">
+      <DependentUpon>BinarySerialPort.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\BinaryTelLable.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\BinaryTelLable.Designer.cs">
+      <DependentUpon>BinaryTelLable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Commands.cs" />
+    <Compile Include="MPS_Tools\CommDB.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\CommDB.Designer.cs">
+      <DependentUpon>CommDB.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\Decoders.cs" />
+    <Compile Include="MPS_Tools\Frame.cs" />
+    <Compile Include="MPS_Tools\Log.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\Log.Designer.cs">
+      <DependentUpon>Log.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\SimpleXML.cs" />
+    <Compile Include="MPS_Tools\Stopwatch.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="MPS_Tools\Stopwatch.Designer.cs">
+      <DependentUpon>Stopwatch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MPS_Tools\TelContainer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="DataLogForm.resx">
+      <DependentUpon>DataLogForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DeviceStatistics.resx">
+      <DependentUpon>DeviceStatistics.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\AnalogTelLable.resx">
+      <DependentUpon>AnalogTelLable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\AnalogTextBox.resx">
+      <DependentUpon>AnalogTextBox.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\BinarySerialPort.resx">
+      <DependentUpon>BinarySerialPort.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\BinaryTelLable.resx">
+      <DependentUpon>BinaryTelLable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\CommDB.resx">
+      <DependentUpon>CommDB.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\Log.resx">
+      <DependentUpon>Log.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MPS_Tools\Stopwatch.resx">
+      <DependentUpon>Stopwatch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserBatt.resx">
+      <DependentUpon>UserBatt.cs</DependentUpon>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="TelDecode.cs" />
+    <Compile Include="UserBatt.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UserBatt.Designer.cs">
+      <DependentUpon>UserBatt.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="MPS_Tools\about.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

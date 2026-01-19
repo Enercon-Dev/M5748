@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="MPS_Tools\about.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="MPS_Tools\AnalogTelLable.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\AnalogTextBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\BinarySerialPort.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\BinaryTelLable.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\CommDB.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\Log.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\Stopwatch.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="MPS_Tools\TelContainer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+  </ItemGroup>
+
+</Project>

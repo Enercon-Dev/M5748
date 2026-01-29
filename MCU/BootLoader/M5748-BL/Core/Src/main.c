@@ -94,6 +94,7 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   int errorCode = checkFlashCrc(1);
+  
  if (errorCode == 0)
   {
     //a valid image of the new firmware is present!
@@ -199,6 +200,7 @@ static int copyApplicationImage()
     return -1;
   
   length = *((uint32_t *)USER_FLASH_LENGTH_ADDRESS);
+  length = __REV(length);
   count = length/4;
   if ((length%4) != 0) 
     count++;
@@ -206,12 +208,12 @@ static int copyApplicationImage()
   if (FLASH_If_Write(APPLICATION_ADDRESS, (uint32_t *)USER_FLASH_FIRST_PAGE_ADDRESS, count) != FLASHIF_OK) //copy new firmware from User Flase (image) area to the application area
     return -1;
   
-  if (checkFlashCrc(0) < 0)
+ if (checkFlashCrc(0) < 0)
     return -1;
   
   length = 0;
   FLASH_If_Write(USER_FLASH_LENGTH_ADDRESS, &length, 1); //erase the length so on the next reset the image will not be copied again
-  //FLASH_If_Erase(USER_FLASH_FIRST_PAGE_ADDRESS, USER_FLASH_END_ADDRESS); //erase the immage (just in case)
+  FLASH_If_Erase(USER_FLASH_FIRST_PAGE_ADDRESS, USER_FLASH_END_ADDRESS); //erase the immage (just in case)
   
   return 0;
 }
@@ -221,7 +223,7 @@ static void clearLength()
   uint32_t length;
     
   FLASH_If_Init(); // Initialise Flash
-  length = 0;
+  length = 0xff;
   FLASH_If_Write(USER_FLASH_LENGTH_ADDRESS, &length, 1);
 }
 /* USER CODE END 4 */

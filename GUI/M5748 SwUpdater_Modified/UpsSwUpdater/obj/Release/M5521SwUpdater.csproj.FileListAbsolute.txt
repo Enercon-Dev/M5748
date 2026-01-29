@@ -1,0 +1,14 @@
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.Properties.Resources.resources
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.csproj.GenerateResource.Cache
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\bin\Release\M5521SwUpdater.exe
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\bin\Release\M5521SwUpdater.pdb
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.exe
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.pdb
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.csprojResolveAssemblyReference.cache
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.csprojResolveAssemblyReference.cache
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Release\M5521SwUpdater.csproj.GenerateResource.Cache
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Release\M1787SwUpdater.Properties.Resources.resources
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\bin\Release\M1787SwUpdater.exe
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\bin\Release\M1787SwUpdater.pdb
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Release\M1787SwUpdater.exe
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Release\M1787SwUpdater.pdb

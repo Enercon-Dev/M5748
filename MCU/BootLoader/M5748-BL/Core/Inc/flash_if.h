@@ -206,7 +206,7 @@ enum {
 
 /* Notable Flash addresses */
 #define USER_FLASH_FIRST_PAGE_ADDRESS 0x08010000 /* Only as example see comment */
-#define USER_FLASH_END_ADDRESS        
+#define USER_FLASH_END_ADDRESS        0x0801E000
 #define USER_FLASH_LENGTH_ADDRESS     (USER_FLASH_END_ADDRESS - 4)
 #define USER_FLASH_MAX_LENGTH  (USER_FLASH_LENGTH_ADDRESS - USER_FLASH_FIRST_PAGE_ADDRESS - 16)
      //the -16 is "just in case"

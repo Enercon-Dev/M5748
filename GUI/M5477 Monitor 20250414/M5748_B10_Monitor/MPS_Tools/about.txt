@@ -1,0 +1,49 @@
+Ver 2.01 21/08/2012
+this version is used in  "M339 New Monitor
+
+changes:
+the "BinaryTelLable" Shade effect is not active during control design. this enables to define a lable color during design.
+      note: applying this change to older versions is requiers to reset the collors of shaded labels 
+the "RecivedTimeout" in "binarySerialPort" is changed so now the received data is sent to the event handler, so in case of receive
+    timeout it can be displayed in the log
+
+Ver 2.01 27/10/2011
+this version is used in "SMBatt Monitor v1.00"
+
+changes:
+AnalogTelLable can now display DBStringField as default field
+added ValueToShortString() method to all DB fields
+
+
+Ver 2.01 27/10/2011
+this version is used in "SMBatt Monitor" and "M906 Monitor"
+
+changes:
+changed DataBuffer.getBit()
+changed DataBuffer.IncBitOffset()
+added DataBuffer.ByteSize7bit flag
+changed DataBuffer.fillBit()
+changed DataBuffer.getBits()
+removed DataBuffer.GetBit_7bit()
+removed RowIntDecoder7bit
+removed AnalogDecoder7bit
+removed DataBuffer.
+   REASON (all above): improve and simplify managment of Litle/Big Endian buffers and 7bit Bytes.
+   main idea is for BigEndian buffers to decod bits (flags, ets) starting from MSbit and for LitleEndian buffers to decod bits starting from LSbit.
+   this way it is much easier to handle "jumps" betwin bytes.
+   AFFECT: requiers to change the bit decoding order and to add to extract all SPARE bits since the byte round mechanizm was removed.
+
+added SimpleXML.RemoveNodes()
+
+Ver 2.00 01/05/2011
+this version is used in UPSMonitor v4.01
+
+
+Ver 1.00 22/02/2011
+
+this version is used in SNMPConsol v2.02
+
+
+Ver 0.01 17/11/2010
+
+this is the first, testing version of MPS_Tools

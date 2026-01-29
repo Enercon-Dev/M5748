@@ -2,7 +2,7 @@
 
 "C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\arm\bin\armstlink2.dll" 
 
-"C:\Projects\Embedded\M5478\M5748\BootLoader\M5748-BL\EWARM\M5748-BL\Exe\M5748-BL.out" 
+"C:\Projects\Embedded\Projects From Git\M5748\MCU\BootLoader\M5748-BL\EWARM\M5748-BL\Exe\M5748-BL.out" 
 
 --plugin="C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\arm\bin\armbat.dll" 
 

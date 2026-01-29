@@ -264,12 +264,13 @@ int checkFlashCrc(int bImageCrc)
   unsigned char* crcPointer;
   int i;
   
-  length = *((uint32_t *)USER_FLASH_LENGTH_ADDRESS);
+  length = *((uint32_t *)USER_FLASH_LENGTH_ADDRESS) ;
+  length = __REV(length);
   if (length > USER_FLASH_MAX_LENGTH || length < 4)
     return ERROR_LENGTH; 
   
   if (bImageCrc)
-    crc = crc32b((unsigned char *)USER_FLASH_FIRST_PAGE_ADDRESS, length-4);
+    crc = crc32b((unsigned char *)USER_FLASH_FIRST_PAGE_ADDRESS,(length - 4));
   else
     crc = crc32b((unsigned char *)APPLICATION_ADDRESS, length-4);
     

@@ -25,7 +25,7 @@ if not "%~1" == "" goto debugFile
 
 @echo on 
 
-"C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Projects\Embedded\M5478\M5748\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.general.xcl" --backend -f "C:\Projects\Embedded\M5478\M5748\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.driver.xcl" 
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Projects\Embedded\Projects From Git\M5748\MCU\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.general.xcl" --backend -f "C:\Projects\Embedded\Projects From Git\M5748\MCU\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.driver.xcl" 
 
 @echo off 
 goto end 
@@ -34,7 +34,7 @@ goto end
 
 @echo on 
 
-"C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Projects\Embedded\M5478\M5748\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.general.xcl" "--debug_file=%~1" --backend -f "C:\Projects\Embedded\M5478\M5748\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.driver.xcl" 
+"C:\Program Files (x86)\IAR Systems\Embedded Workbench 8.4\common\bin\cspybat" -f "C:\Projects\Embedded\Projects From Git\M5748\MCU\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.general.xcl" "--debug_file=%~1" --backend -f "C:\Projects\Embedded\Projects From Git\M5748\MCU\BootLoader\M5748-BL\EWARM\settings\M5748-BL.M5748-BL.driver.xcl" 
 
 @echo off 
 :end

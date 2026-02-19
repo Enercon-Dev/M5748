@@ -40,7 +40,7 @@ namespace M1787_Monitor
             dbInit();
             LoadParameters();
             serialPort.parentForm = this;
-            serialPort.SetBasicFrame(new M1787Frame());
+            serialPort.SetBasicFrame(new M5748Frame());
             try
             {
                 UartNameComboBox.Items.Clear();
@@ -128,7 +128,7 @@ namespace M1787_Monitor
                 return;
             }
 
-            M1787Frame frame = new M1787Frame(buffer.GetDataBuffer());
+            M5748Frame frame = new M5748Frame(buffer.GetDataBuffer());
             frame.Description = description;
             frame.PrepareForTransmition();
             comReplyTimer.Enabled = true;
@@ -421,6 +421,8 @@ namespace M1787_Monitor
 
         private void hpfVersionATLable_DataUpdated(object sender, EventArgs e)
         {
+            int a = db["Version.Major"].GetIntValue();
+            int b = db["Version.Minor"].GetIntValue();
             hpfVersionATLable.Text = db["Version.Major"].GetIntValue() + "." + db["Version.Minor"].GetIntValue();
         }
 
@@ -446,7 +448,7 @@ namespace M1787_Monitor
             x = byte.Parse(errorParam1TextBox.Text, System.Globalization.NumberStyles.AllowHexSpecifier);
             byte[] buffer = { 0xC6, 0xED, 0xF2, 0xB9, 0x01, 0, 0 };
             buffer[5] = x;
-            buffer[6] = (byte)M1787Frame.CalcCSUM(buffer, 6);
+            buffer[6] = (byte)M5748Frame.CalcCSUM(buffer, 6);
             log.Add(buffer, "wrong OKcode", LogedStatus.LsCommand);
             TransmitBuffer(buffer);
         }

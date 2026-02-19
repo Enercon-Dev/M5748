@@ -39,9 +39,9 @@ int loadPersistentData()
   
   //TODO: add CRC
   
-//  persData.ipAddress = getLong(&db);
-//  persData.subNetMask = getLong(&db);
-//  persData.defaultGateway = getLong(&db);
+  persData.mfgDate = getLong(&db); // parse in function
+  persData.BattCharge = getLong(&db);
+  persData.lastFullChargeTime = getLong(&db);
   
   bPersDataValid = TRUE;
   

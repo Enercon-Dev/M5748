@@ -110,7 +110,6 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
-  HAL_ADCEx_Calibration_Start(&hadc1);
   MX_I2C2_Init();
   MX_USART1_UART_Init();
   MX_TIM4_Init();
@@ -121,6 +120,11 @@ int main(void)
   initOutputs();
   mgmtInit();
   HAL_Delay(100); // for MCU_EN DBG
+  uint8_t data = 5;
+  uint8_t rx = 0;
+//HAL_I2C_Mem_Write(&hi2c2,(uint16_t) (0xa0 << 1) ,0, I2C_MEMADD_SIZE_8BIT,&data,(uint16_t) 1, HAL_MAX_DELAY);
+ //HAL_I2C_Mem_Read(&hi2c2, (uint16_t) (0xa0 << 1),0 , I2C_MEMADD_SIZE_8BIT,&rx, 1,HAL_MAX_DELAY);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

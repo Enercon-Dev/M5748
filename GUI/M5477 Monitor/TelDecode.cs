@@ -64,6 +64,8 @@ namespace M1787_Monitor
 
 
         private string[] HPFStatusTelFields = {
+            "Version.Major",
+            "Version.Minor",
             "Out.dch_EN2",
             "Out.dch_EN1",
             "Out.Heater_En",
@@ -94,9 +96,8 @@ namespace M1787_Monitor
             "AnIn.Ich",
             "AnIn.TestRef",
             "BattSOC",
-            "State_FullBatt",
-            "Version Major",
-            "Version Minor"
+            "State_FullBatt"
+       
 
             };
 

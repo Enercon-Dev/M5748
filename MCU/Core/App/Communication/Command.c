@@ -58,7 +58,9 @@ static const struct CmdDecodeMap cmdDecodeMap[] =
   {OPCODE_BUCK_STATUS_TEL, decodeBuckTel},
   {OPCODE_OUTPUT_CONTROL_TEL,decodeOutputControl},
   {OPCODE_WRITE_MEMORY, writeMemCmd}, //boot loader tel 
-  {OPCODE_CLEAR_MEMORY, clearMemCmd} //boot loader tel 
+  {OPCODE_CLEAR_MEMORY, clearMemCmd}, //boot loader tel 
+  {OPCODE_READ_MEMORY, fillReadMemoryTel}
+
 };
 #define SIZEOF_CMD_DECODE_MAP (sizeof(cmdDecodeMap) / sizeof(struct CmdDecodeMap))
 
@@ -449,10 +451,15 @@ rowOut.bOut_dCh_EN2 = GETBIT(flags, 7);
 
 AckCode fillControlStatusTel(DataBuffer* db)
 {
-  fillByte(db,0x81);
+  uint8_t verMajor = 0;
+  uint8_t verMinor = 1;
   
+  fillByte(db,0x81);
+  fillByte(db,verMajor);
+  fillByte(db,verMinor);
     uint16_t flags;
   flags = 
+    (mgmt.sDisbalance.state               ? BIT(9) : 0) |
     (mgmt.sFullBatt.state                 ? BIT(8) : 0) |
     (rowOut.bOut_dCh_EN2                  ? BIT(7) : 0) |
     (rowOut.bOut_dCh_EN1                  ? BIT(6) : 0) |
@@ -498,59 +505,16 @@ fillByte(db,battType);
    flags = 
     (mgmt.sFullBatt.state                 ? BIT(7) : 0);
   fillByte(db,flags);
-fillByte(db,VERSION_MAJOR);
-fillByte(db,VERSION_MINOR);
+
 
 
 return Ack_NoError; //23 * 4  bytes
-//  uint16_t flags;
-//  flags = 
-//    (rowOut.bInputRelayEN       ? BIT(7) : 0) |
-//    (rowOut.bInterlock_OUT      ? BIT(6) : 0) |
-//    (rowOut.bFAN_24V_EN         ? BIT(5) : 0) |
-//    (rowOut.bHPF_PWM_EN         ? BIT(4) : 0) |
-//    (inputs.sInterlock_In.state ? BIT(3) : 0) |
-//    (rowIn.bFP_SW_SNS           ? BIT(2) : 0) ;
-//      
-//  fillByte(db, flags);
-//  fillShort(db, mgmt.idCode);
-//  fillLongAsShort(db, anIn.temp);
-//  fillLongAsShort(db, anIn.vcc3_3);
-//  fillLongAsShort(db, anIn.auxA);
-//  fillLongAsShort(db, anIn.auxB);
-//  fillLongAsShort(db, anIn.fan24v);
-//  fillLongAsShort(db, anIn.FanTechometer);
-//  
-//  
-//  fillLongAsShort(db, mgmt.hotSpot);
-//  fillLongAsShort(db, rowOut.fanSpeed);
-//  fillLongAsShort(db, isoData[0].temp1);
-//  fillByte(db, (signed char)mgmt.voltageCorrection);
-//  fillByte(db, (signed char)mgmt.voltageTrimming);
-//  
-//  
-//  flags = 
-//    ( mgmt.bIntCommProblem    ? BIT(15) : 0) |
-//    ( mgmt.bInterlockFailure  ? BIT(14) : 0) |
-//    (!mgmt.bModulesVersionOK  ? BIT(13) : 0) |
-//    ( mgmt.bInternalFailure   ? BIT(12) : 0) |
-//    ( mgmt.sReady.state       ? BIT(11) : 0) |
-//    ( !bIAP_enabled           ? BIT(10) : 0) |
-//    ( mgmt.sHpfEn.state       ? BIT(9) : 0) |
-//    ( mgmt.bSelfTestEnded     ? BIT(8) : 0) |
-//    ( !mgmt.bFaultDetected    ? BIT(7) : 0) |
-//    ( !mgmt.bIPReset          ? BIT(6) : 0) |
-//    ( mgmt.sInterlock.state   ? BIT(5) : 0) |
-//    ( mgmt.bOutputReady       ? BIT(4) : 0) ;
-//    
-//  fillShort(db, flags);
-  
-  //tel length must be less then MAX_DBG_BUFFER_LENGTH = 50
+
 }
 
 AckCode clearMemCmd(DataBuffer* db)
 {
-if (getRemainingLength(db) < 8 ) {
+if (getRemainingLength(db) < 4 ) {
     // not enough data in buffer for address and length
     return Ack_WrongLength;
   }
@@ -559,9 +523,9 @@ if (getRemainingLength(db) < 8 ) {
     //wrong password
     return Ack_WrongParameter;
   }
-  uint32_t blockAddr = getLong(db); // start address 
+  //uint32_t blockAddr = getLong(db); // start address 
 
-FLASH_If_Erase(blockAddr,USER_FLASH_END_ADDRESS);
+FLASH_If_Erase(USER_FLASH_FIRST_PAGE_ADDRESS ,USER_FLASH_END_ADDRESS);
   return Ack_NoError;
 
 }
@@ -603,3 +567,34 @@ if (getRemainingLength(db) < 8 + 2) {
     
 }
 
+AckCode fillReadMemoryTel(DataBuffer* db)
+{
+  DataBuffer* telDB = intUart_getTxBuffer(0);
+   if(telDB == NULL)
+     return Ack_UnkonwnError;
+  
+  if (getRemainingLength(db) < 8 + 2) {
+    // not enough data in buffer for address and length
+    return Ack_WrongLength;
+  }
+  
+  if (getLong(db) != LOADER_PASSWORD) {
+    //wrong password
+    return Ack_WrongParameter;
+  }
+  uint32_t baseAddr = getLong(db);
+  uint32_t dataLen = getShort(db);
+  
+  if (!bVerifyBlockIndex(baseAddr, dataLen)) {
+    //wrong Address or data length
+    return Ack_WrongParameter;
+  }
+  
+  fillByte(telDB,0x51);
+  fillLong(telDB, baseAddr);
+  fillShort(telDB, dataLen);
+  fillArray(telDB, (uint8_t*)baseAddr,  dataLen);
+  
+  intUart_quickSend(0);
+  return Ack_NoError;
+}

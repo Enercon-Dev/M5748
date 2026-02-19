@@ -35,7 +35,7 @@ static void manageBattTemperature();
 static void checkTempDelta(uint32_t deltaTemp);
 
 static void chargerAndSwitchControl();
-
+static void manageBattCharge();
 
 void managment()
 {
@@ -43,6 +43,8 @@ void managment()
   
   //manageBattTemperature();
  chargerAndSwitchControl();
+ manageBattCharge();
+
   if(!inputs.sEPO.state && !inputs.sDSBL_FB.state)
   {
       rowOut.bOut_MCU_EN = 1;
@@ -162,20 +164,37 @@ static void checkTempDelta(uint32_t deltaTemp)
         heaterOffDuration_s = 0;
         mgmt.bTempSensorsProblem = 0;
     }
-
 }
 
 static void chargerAndSwitchControl()
 {
+  //NEW CODE
+  if(!rowIn.bIn_HeaterDisable || !rowOut.bOut_Charge_Sw_En )
+  {
+    rowOut.bOut_dCh_EN1 = 0;
+    rowOut.bOut_dCh_EN2 = 0;
+  }
+  
+  if(rowIn.bIn_HeaterDisable || rowOut.bOut_Charge_Sw_En )
+        rowOut.bOut_dCh_EN2 = 1;
+
+  if(rowIn.bIn_HeaterDisable && rowOut.bOut_Charge_Sw_En )
+        rowOut.bOut_dCh_EN1 = 1;
+  
+  // TODO: Inrush protection
+  if(rowOut.bOut_dCh_EN1 || rowOut.bOut_dCh_EN2)
+     rowOut.bOut_Charge_Sw_En = 0;
+  
+  
+  //OLD CODE
    if(mgmt.batt_SOC < SOC(98.0))
    {
       if(anIn.charger < anIn.vBatt + VOLTAGE(1))
       {
         rowOut.bOut_Charge_Sw_En = 1;
-      }
-        
+      }    
    }
-   
+ 
    else
    {
     if(mgmt.batt_SOC == SOC(100.0)) // In case of a bug in charging
@@ -185,8 +204,8 @@ static void chargerAndSwitchControl()
    if(!mgmt.sFullBatt.state)
     {
        ConservativeDebounce(&mgmt.sFullBatt,
-       rowOut.bOut_MCU_EN && rowOut.bOut_Charge_Sw_En && anIn.charger > VOLTAGE(45) && anIn.vBatt > VOLTAGE(45) && anIn.Ich < CURRENT(0.2f), 10*T_1SEC, 1);
-       
+       rowOut.bOut_MCU_EN && rowOut.bOut_Charge_Sw_En && anIn.charger > VOLTAGE(45) && anIn.vBatt > VOLTAGE(45) && anIn.Ich < CURRENT(0.2f), 10 *T_1SEC, 1);
+    
        if(mgmt.sFullBatt.state)
        {
           mgmt.batt_SOC = SOC(100.0);
@@ -194,98 +213,42 @@ static void chargerAndSwitchControl()
        }
        
     }
+   //TODO : handle o_Charge and raise DISBALANCE
+   if(rowIn.bIn_dO_Charge) // modify this to debounce
+   {
+     if(rowOut.bOut_MCU_EN)
+       mgmt.sDisbalance.state = 1; 
+   }
+   else
+       mgmt.sDisbalance.state = 0; 
+ 
+  
 }
 
+static void manageBattCharge()
+{
+  if(!mgmt.sLowVbatt.state)
+  {
+   ConservativeDebounce(&mgmt.sLowVbatt,rowOut.bOut_MCU_EN && anIn.vBatt < VOLTAGE(32) , 20 * T_1SEC, 1);
+   if(mgmt.sLowVbatt.state)
+     rowOut.bOut_MCU_EN = 0;
+  }
+       
+   // save to eeprom
+}
 
 void outputsUpate()
 {
 
 }
 
-static void manageCurrentSharing()
-{
-  //Vout CMD resolution is 166mV
-  //Vout slop is ~3V @ 25A = 120mV/A (for single buck)
-  //so a difference of more then 5A should be easily corrected
-  
-  if (mgmt.bCommRoundCompleted && mgmt.bOutputEnable)
-  {
-    int32_t currentDif = (int32_t)(buckData[ModuleA].iout) - (int32_t)(buckData[ModuleB].iout);
-    
-    if (currentDif > CURRENT(5))
-    {
-      mgmt.voltageCorrection--; //A > B : decrease A and increase B output voltage 
-    }
-    else if (-currentDif > CURRENT(5))
-    {
-      mgmt.voltageCorrection++; //A < B : increase A and decrease B output voltage
-    }
-    
-    if (mgmt.voltageCorrection > MAX_VOLTAGE_CORRECTION)
-      mgmt.voltageCorrection = MAX_VOLTAGE_CORRECTION;
-    else if (mgmt.voltageCorrection < -MAX_VOLTAGE_CORRECTION)
-      mgmt.voltageCorrection = -MAX_VOLTAGE_CORRECTION;
-  }
-}
 
-
-static void manageVoltageTrimming()
-{
-  static int delay = 0;
-  
-  if (!mgmt.bCommRoundCompleted)
-    return;
-  
-  delay++;
-  if (delay < 2)
-    return;
-
-  delay = 0;
-  //perform voltage trimming once every two comm rounds - in order for the voltage chage to take effect
-  
-  //Vout CMD resolution is 166mV
-  //Vout telemetry resolution is 111mV
-  if (mgmt.bOutputEnable && !mgmt.sCCMode.state)
-  {
-    int32_t voltageError = (int32_t)mgmt.vOut - (int32_t)mgmt.VoutCMD;
-    
-    if (voltageError > (int32_t)VOLTAGE(0.3))
-    {
-      mgmt.voltageTrimming--;
-    }
-    else if (-voltageError > (int32_t)VOLTAGE(0.3))
-    {
-      mgmt.voltageTrimming++;
-    }
-    
-    if (mgmt.voltageTrimming > MAX_VOLTAGE_TRIMMING)
-      mgmt.voltageTrimming = MAX_VOLTAGE_TRIMMING;
-    else if (mgmt.voltageTrimming < -MAX_VOLTAGE_TRIMMING)
-      mgmt.voltageTrimming = -MAX_VOLTAGE_TRIMMING;
-  }
-}
 
 
 static void overLoadProtection()
 {
-  uint32_t vout;
+ 
   
-  if (!mgmt.bOutputEnable && !mgmt.sOverLoad.state)
-  {
-    SetDebounce(&mgmt.sOverLoad, FALSE); //reset the debounce counter
-  }
-  
-  vout = (buckData[0].vout + buckData[1].vout)/2;
-  if (mgmt.bPSMode) //Power Supply Mode
-  {
-    Debounce(&mgmt.sOverLoad, mgmt.sCCMode.state || (vout < mgmt.VoutCMD*90/100), T_1SEC*2,2,1, 1,0,0);
-    //the vout condition is for the case that output shuts down (without reporting CC mode)
-  }
-  else //Charger Mode
-  {
-    
-    Debounce(&mgmt.sOverLoad, vout < mgmt.VoutCMD*60/100, T_1SEC*2,2,1, 1,0,0); 
-  }
 }
 
 
@@ -737,9 +700,10 @@ int OutOffCertain()
 
 void mgmtInit() 
 {
-  // TODO: find UNIT ID 0> ID pins
-  // TODO: READ FROM EEPROM
+  
   //TODO: UART GET ALL IO STATES and REPORT + send BATT_EN
+  
+  // TODO: READ FROM EEPROM!!
   mgmt.commState = 1;
   readID();
   loadPersistentData();

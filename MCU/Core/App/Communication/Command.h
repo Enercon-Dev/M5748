@@ -42,6 +42,7 @@ AckCode decodeOutputControl(DataBuffer* db);
 //Bootloader and SW upload commands
 AckCode clearMemCmd(DataBuffer* db);
 AckCode writeMemCmd(DataBuffer* db);
+AckCode fillReadMemoryTel(DataBuffer* db);
 
 
 #endif

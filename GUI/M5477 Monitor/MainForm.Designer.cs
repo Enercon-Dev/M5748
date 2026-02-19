@@ -350,7 +350,7 @@
             // 
             // OpenDataLogbutton
             // 
-            this.OpenDataLogbutton.Location = new System.Drawing.Point(1023, 735);
+            this.OpenDataLogbutton.Location = new System.Drawing.Point(1024, 632);
             this.OpenDataLogbutton.Name = "OpenDataLogbutton";
             this.OpenDataLogbutton.Size = new System.Drawing.Size(60, 29);
             this.OpenDataLogbutton.TabIndex = 11;
@@ -368,7 +368,7 @@
             this.blinkCheckBox.AutoSize = true;
             this.blinkCheckBox.Checked = true;
             this.blinkCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.blinkCheckBox.Location = new System.Drawing.Point(1254, 860);
+            this.blinkCheckBox.Location = new System.Drawing.Point(1254, 955);
             this.blinkCheckBox.Name = "blinkCheckBox";
             this.blinkCheckBox.Size = new System.Drawing.Size(49, 17);
             this.blinkCheckBox.TabIndex = 16;
@@ -385,7 +385,7 @@
             // 
             this.SendingCommandLabel.AutoSize = true;
             this.SendingCommandLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(177)));
-            this.SendingCommandLabel.Location = new System.Drawing.Point(1250, 768);
+            this.SendingCommandLabel.Location = new System.Drawing.Point(1250, 863);
             this.SendingCommandLabel.Name = "SendingCommandLabel";
             this.SendingCommandLabel.Size = new System.Drawing.Size(111, 13);
             this.SendingCommandLabel.TabIndex = 17;
@@ -397,7 +397,7 @@
             this.EnableLogCheckBox.AutoSize = true;
             this.EnableLogCheckBox.Checked = true;
             this.EnableLogCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.EnableLogCheckBox.Location = new System.Drawing.Point(1254, 831);
+            this.EnableLogCheckBox.Location = new System.Drawing.Point(1254, 926);
             this.EnableLogCheckBox.Name = "EnableLogCheckBox";
             this.EnableLogCheckBox.Size = new System.Drawing.Size(80, 17);
             this.EnableLogCheckBox.TabIndex = 18;
@@ -407,7 +407,7 @@
             // UartNameComboBox
             // 
             this.UartNameComboBox.FormattingEnabled = true;
-            this.UartNameComboBox.Location = new System.Drawing.Point(1023, 708);
+            this.UartNameComboBox.Location = new System.Drawing.Point(1024, 605);
             this.UartNameComboBox.Name = "UartNameComboBox";
             this.UartNameComboBox.Size = new System.Drawing.Size(67, 21);
             this.UartNameComboBox.TabIndex = 19;
@@ -423,7 +423,7 @@
             this.groupBox5.Controls.Add(this.autoReqBuckRadioButton);
             this.groupBox5.Controls.Add(this.AutoReqStatusRadioButton);
             this.groupBox5.Controls.Add(this.autoReqOffRadioButton);
-            this.groupBox5.Location = new System.Drawing.Point(1109, 708);
+            this.groupBox5.Location = new System.Drawing.Point(1110, 605);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(89, 175);
             this.groupBox5.TabIndex = 21;
@@ -503,7 +503,7 @@
             this.autoCommanCheckBox.AutoSize = true;
             this.autoCommanCheckBox.Checked = true;
             this.autoCommanCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.autoCommanCheckBox.Location = new System.Drawing.Point(1254, 889);
+            this.autoCommanCheckBox.Location = new System.Drawing.Point(1254, 984);
             this.autoCommanCheckBox.Name = "autoCommanCheckBox";
             this.autoCommanCheckBox.Size = new System.Drawing.Size(98, 17);
             this.autoCommanCheckBox.TabIndex = 23;
@@ -2415,7 +2415,7 @@
             this.tabControl1.Controls.Add(this.tabPage1);
             this.tabControl1.Controls.Add(this.tabPage5);
             this.tabControl1.Controls.Add(this.tabPage9);
-            this.tabControl1.Location = new System.Drawing.Point(9, 105);
+            this.tabControl1.Location = new System.Drawing.Point(12, 12);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
             this.tabControl1.Size = new System.Drawing.Size(1216, 584);
@@ -3900,9 +3900,9 @@
             this.hpfVersionATLable.AutoSize = true;
             this.hpfVersionATLable.DB = this.db;
             this.hpfVersionATLable.DBFields = new string[] {
-        "",
         "Version.Major",
-        "Version.Minor"};
+        "Version.Minor",
+        ""};
             this.hpfVersionATLable.Location = new System.Drawing.Point(53, 16);
             this.hpfVersionATLable.Name = "hpfVersionATLable";
             this.hpfVersionATLable.NumberFormat = "0.0";
@@ -4113,7 +4113,7 @@
             // 
             // log
             // 
-            this.log.Location = new System.Drawing.Point(12, 708);
+            this.log.Location = new System.Drawing.Point(12, 602);
             this.log.Name = "log";
             this.log.Size = new System.Drawing.Size(998, 178);
             this.log.TabIndex = 0;
@@ -4130,7 +4130,8 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
-            this.ClientSize = new System.Drawing.Size(1222, 733);
+            this.AutoSize = true;
+            this.ClientSize = new System.Drawing.Size(1222, 841);
             this.Controls.Add(this.autoCommanCheckBox);
             this.Controls.Add(this.groupBox5);
             this.Controls.Add(this.UartNameComboBox);

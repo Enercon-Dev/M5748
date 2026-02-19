@@ -13,7 +13,8 @@ namespace M1787_Monitor
         {
             FlagDecoder flagDecoder = new FlagDecoder(1, false);
 
-            
+            db.AddField(new DBRawIntField("Version.Major", "", new RawIntDecoder(8)));
+            db.AddField(new DBRawIntField("Version.Minor", "", new RawIntDecoder(8)));
             db.AddField(new DBFlagField("Out.dch_EN2", "", flagDecoder));
             db.AddField(new DBFlagField("Out.dch_EN1", "", flagDecoder));
             db.AddField(new DBFlagField("Out.Heater_En", "", flagDecoder));
@@ -47,6 +48,7 @@ namespace M1787_Monitor
             db.AddField(new DBAnalogField("BattSOC", "", new AnalogDecoder(16, 0.01, 0), "%"));
 
             db.AddField(new DBFlagField("State_FullBatt", "", flagDecoder));
+        
 
 
             //db.AddField(new DBRawIntField("HPF.Version.Minor", "", new RawIntDecoder(4)));

@@ -85,6 +85,10 @@ void Error_Handler(void);
 #define test_ref_GPIO_Port GPIOB
 #define HEATER_EN_Pin GPIO_PIN_2
 #define HEATER_EN_GPIO_Port GPIOB
+#define MAC_SCL_Pin GPIO_PIN_10
+#define MAC_SCL_GPIO_Port GPIOB
+#define MAC_SDA_Pin GPIO_PIN_11
+#define MAC_SDA_GPIO_Port GPIOB
 #define DSBL_Test_Pin GPIO_PIN_12
 #define DSBL_Test_GPIO_Port GPIOB
 #define MCU_EN_Pin GPIO_PIN_13

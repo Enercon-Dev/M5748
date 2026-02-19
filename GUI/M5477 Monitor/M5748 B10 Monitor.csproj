@@ -85,7 +85,7 @@
     <Compile Include="DeviceStatistics.Designer.cs">
       <DependentUpon>DeviceStatistics.cs</DependentUpon>
     </Compile>
-    <Compile Include="M1787Frame.cs" />
+    <Compile Include="M5748Frame.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

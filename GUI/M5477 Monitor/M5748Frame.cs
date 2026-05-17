@@ -58,7 +58,7 @@ namespace M1787_Monitor
             return new M5748Frame(this);
         }
 
-        
+
         private static byte[] commandMagicNumber = { 0x96, 0xCF, 0xE4, 0xBE };
         private static byte[] telemMagicNumber = { 0x96, 0xCF, 0xE4, 0xBE };
 
@@ -74,12 +74,12 @@ namespace M1787_Monitor
                     buffer[i] = commandMagicNumber[i];
 
                 //fill data length
-                buffer[4] = (byte)(((DataLength+1) & 0xFF));
+                buffer[4] = (byte)(((DataLength + 1) & 0xFF));
                 buffer[5] = (byte)((Sourse << 4) | (Destination & 0x0F));
 
                 //fill crc
                 int csum = CalcCSUM(buffer.ToArray(), buffer.Count - TrailerLength);
-                
+
                 buffer[buffer.Count - 1] = (byte)(csum & 0xFF);
             }
             else if (type == MPS_FrameType.Telemetry)
@@ -121,7 +121,7 @@ namespace M1787_Monitor
             if (start + MinFrameLength > stream.Length)
                 return result; //not enaugh data in stream
 
-            int dataLength = stream[start+4];
+            int dataLength = stream[start + 4];
             int frameLength = MinFrameLength - 1 + dataLength;
             if (start + frameLength > stream.Length)
                 return result; //not enaugh data in stream
@@ -136,7 +136,7 @@ namespace M1787_Monitor
             buffer = new List<byte>(frameLength);
 
             for (int i = 0; i < frameLength; i++)
-                buffer.Add(stream[start+i]);
+                buffer.Add(stream[start + i]);
 
             type = MPS_FrameType.Telemetry;
             return result;

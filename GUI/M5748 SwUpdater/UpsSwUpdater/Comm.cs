@@ -17,7 +17,7 @@ namespace M5748SWUpdater
         private List<byte> recivedData = new List<byte>();
         public enum CommAddress { Host = 0x0F, Master = 0x0A, Charger = 0x0B, Batt1 = 1, Batt2 = 2, Batt3 = 3, Batt4 = 4, Batt5 = 5, Batt6 = 6, Non = 0 }
         private CommAddress sourceAddress = CommAddress.Master;
-        private CommAddress destinationAddress = CommAddress.Charger;
+        private CommAddress destinationAddress = CommAddress.Batt3;
 
 
         public void OpenPort(string comName, int baudRate)

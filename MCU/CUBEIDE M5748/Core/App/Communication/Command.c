@@ -23,8 +23,6 @@ extern UART_HandleTypeDef huart1;
 
 //#include "DBG.h"
 
-
-
 void setTel(struct TelRequest* tel, int telShort, int telLong, int delay);
 AckCode decodeTelRequestCmd(DataBuffer* db,  struct TelRequest* tel);
 
@@ -42,7 +40,10 @@ AckCode fillWriteAckTel(DataBuffer* db, struct TelRequest* tel);
 AckCode fillReadMemoryTel(DataBuffer* db, struct TelRequest* tel);
 AckCode fillChargerStatusTel(DataBuffer* db, struct TelRequest* tel);
 AckCode fillSwVersion(DataBuffer* db, struct TelRequest* tel);
+AckCode changeBootCmd(DataBuffer* db,  struct TelRequest* tel);
 
+AckCode decodeDeltaIResponse(DataBuffer* db, struct TelRequest* tel);
+AckCode decodeMasterBattCmd (DataBuffer* db, struct TelRequest* tel);
 
 //------------------ Command Decoders ------------------
 // since M5477 acts as master only this sectionis actually decodes received telemetries
@@ -55,16 +56,43 @@ struct CmdDecodeMap
 static const struct CmdDecodeMap cmdDecodeMap[] =
 {
  {OPCODE_TEL_REQUEST_CMD, decodeTelRequestCmd},
+ {OPCODE_MASTER_BATT_CMD, decodeMasterBattCmd},
   {OPCODE_CHARGER_STATUS_TEL, decodeStatusCmd},
   {OPCODE_OUTPUT_CONTROL_TEL,decodeOutputControl},
+  //{OPCODE_DELTA_I_RESPONSE_TEL, decodeDeltaIResponse},
   {OPCODE_WRITE_MEMORY, writeMemCmd}, //boot loader tel
   {OPCODE_CLEAR_MEMORY, clearMemCmd}, //boot loader tel
-
-
+  {OPCODE_CHANGE_BOOT, changeBootCmd}
 
 
 };
 #define SIZEOF_CMD_DECODE_MAP (sizeof(cmdDecodeMap) / sizeof(struct CmdDecodeMap))
+
+AckCode decodeMasterBattCmd(DataBuffer* db, struct TelRequest* tel)
+{
+	 if (getRemainingLength(db) < 6) {
+	    // not enough data in buffer for address and length
+	    return Ack_WrongLength;
+	  }
+    uint8_t flags = getByte(db);
+    mgmt.bEnableFromMaster = GETBIT(flags,0);
+    mgmt.bHeaterTestFromMaster = GETBIT(flags,1);
+
+    mgmt.systemState = getByte(db);
+    mgmt.qDischarge = getShort(db);
+    mgmt.qCharge = getShort(db);
+
+
+	 // Prepare Status tel
+	  tel->ackTelTmp = AckTel_Long;
+	  setTel(tel, OPCODE_BATT_STATUS_TEL, OPCODE_BATT_STATUS_TEL, 0);
+
+
+
+	  return Ack_NoError;
+
+
+}
 
 
 AckCode decodeCommand(DataBuffer* db,  struct TelRequest* tel)
@@ -95,16 +123,15 @@ AckCode decodeOutputControl(DataBuffer* db)
 {
 uint8_t flags = getByte(db);
 
-rowOut.bOut_dCh_EN2 = GETBIT(flags, 7);
- rowOut.bOut_dCh_EN1   =  GETBIT(flags, 6);
+//rowOut.bOut_dCh_EN2 = GETBIT(flags, 7);
+ //rowOut.bOut_dCh_EN1   =  GETBIT(flags, 6);
  rowOut.bOut_Heater_En  = GETBIT(flags, 5);
- rowOut.bOut_Charge_Sw_En  =  GETBIT(flags, 4);
- rowOut.bOut_MCU_EN       = GETBIT(flags, 3);
+ //rowOut.bOut_Charge_Sw_En  =  GETBIT(flags, 4);
+// rowOut.bOut_MCU_EN       = GETBIT(flags, 3);
  rowOut.bOut_OV_Test       =  GETBIT(flags, 2);
  rowOut.bOut_BP_RST         =   GETBIT(flags, 1);
  rowOut.bOut_DSBL_test       =   GETBIT(flags, 0);
 
- decodeStatusCmd(db);
 }
 
 AckCode decodeStatusCmd(DataBuffer* db)
@@ -113,23 +140,29 @@ AckCode decodeStatusCmd(DataBuffer* db)
    db_tel = intUart_getTxBuffer(0);
    if(db_tel == NULL)
      return Ack_UnkonwnError;
-   fillControlStatusTel(db_tel);
 
      intUart_quickSend(0);
 
 }
-AckCode fillControlStatusTel(DataBuffer* db )
-{
-  uint8_t verMajor = 0;
-  uint8_t verMinor = 6;
 
-  fillByte(db,0x81);
-  fillByte(db,verMajor);
-  fillByte(db,verMinor);
+AckCode decodeDeltaIResponse(DataBuffer* db, struct TelRequest* tel)
+{
+    if (getRemainingLength(db) < 4)
+        return Ack_WrongLength;
+
+    uint32_t deltaI = getLong(db);
+
+    Resistance_SetDeltaI(deltaI);
+
+    return Ack_NoError;
+}
+
+AckCode fillControlStatusTel(DataBuffer* db  , struct TelRequest* tel)
+{
+
     uint16_t flags;
   flags =
-    (mgmt.sDisbalance.state               ? BIT(9) : 0) |
-    (mgmt.sFullBatt.state                 ? BIT(8) : 0) |
+
     (rowOut.bOut_dCh_EN2                  ? BIT(7) : 0) |
     (rowOut.bOut_dCh_EN1                  ? BIT(6) : 0) |
     (rowOut.bOut_Heater_En                ? BIT(5) : 0) |
@@ -170,9 +203,18 @@ fillByte(db,battType);
   fillLongAsShort(db, rowAnIn.test_Ref);
   fillLongAsShort(db, mgmt.batt_SOC);
 
-
    flags =
-    (mgmt.sFullBatt.state                 ? BIT(7) : 0);
+    (mgmt.sFullBatt.state              ? BIT(7) : 0) |
+	(mgmt.sDisbalance.state            ? BIT(6) : 0) |
+	(mgmt.sLowVbatt.state               ? BIT(5) : 0 );
+  fillByte(db,flags);
+
+  fillByte(db, mgmt.batt_State);
+
+  flags = (mgmt.bEnableFromMaster           ? BIT(7) : 0) ;
+  fillByte(db,flags);
+
+  flags = mgmt.systemState;
   fillByte(db,flags);
 
 
@@ -180,6 +222,10 @@ fillByte(db,battType);
 return Ack_NoError; //23 * 4  bytes
 
 }
+
+
+
+
 AckCode decodeTelRequestCmd(DataBuffer* db,  struct TelRequest* tel)
 {
   int i;
@@ -334,7 +380,9 @@ static const struct TelDecodeMap telDecodeMap[] =
   {OPCODE_CHARGER_STATUS_TEL, fillChargerStatusTel},
   {OPCODE_WRITE_ACK_TEL, fillWriteAckTel},
   {OPCODE_SOFTWARE_VERSION_TEL, fillSwVersion},
-  {OPCODE_READ_MEMORY_TEL, fillReadMemoryTel} // should opcode be OPCODE_READ_MEMORY_TEL ?
+  {OPCODE_READ_MEMORY_TEL, fillReadMemoryTel}, // should opcode be OPCODE_READ_MEMORY_TEL ?
+  {OPCODE_BATT_STATUS_TEL, fillControlStatusTel}
+
 
 
 };
@@ -381,11 +429,9 @@ AckCode fillTelemetry(DataBuffer* db, struct TelRequest* tel)
 AckCode fillSwVersion(DataBuffer* db, struct TelRequest* tel)
 {
   
-  uint8_t verMajor = 0;
-  uint8_t verMinor = 6;
-
-  fillByte(db,verMajor);
-  fillByte(db,verMinor);
+	  fillShort(db, SOFTWARE_VERSION); //SW version
+	  fillShort(db, INTERFACE_VERISION); //Interface version
+	  fillString(db, SOFTWARE_VERSION_STR, 32);
   return Ack_NoError;
 }
 

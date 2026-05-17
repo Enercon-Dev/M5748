@@ -9,27 +9,24 @@
 #include "IntComm.h"
 #include "Command.h"
 #include "PersistentData.h"
-
+#include "BattResMonitor.h"
 
 #define FAM_START_UP_TIME (15*T_1SEC)
 #define LIMITS_UPDATE_DELAY (2*T_1SEC)
 #define KELVIN_TO_CELSIUS_FACTOR (273.15f)
 
-struct ReportedHpfData hpfData[MODULES_NUM] = {0};
-struct ReportedIsoData isoData[MODULES_NUM] = {0};
-struct ReportedBuckData buckData[MODULES_NUM] = {0};
+
 struct Managment mgmt = {0};
 extern struct PersistentData persData;
+extern struct RowAnInputs anIn ;
 
 static void InternalCommHandle();
 static void CommWDHandle();
 //static void updateColectedData();
-static void remoteLedUpdate();
 static void idCodeHandle();
 static void protectionLimitsUpdate();
 static void handleRegulationFailure();
-static void manageCurrentSharing();
-static void manageVoltageTrimming();
+
 static void overLoadProtection();
 //TEMP managment
 static void manageBattTemperature();
@@ -38,30 +35,56 @@ static void checkTempDelta(uint32_t deltaTemp);
 static void chargerAndSwitchControl();
 static void manageBattCharge();
 
+static int enableL2H = 0;
+
 void managment()
 {
-  int outEn_old = FALSE;
   
   //manageBattTemperature();
  chargerAndSwitchControl();
  manageBattCharge();
+// Resistance_CheckVoltage(anIn.vBatt);
+ //Resistance_Task();
 
-  if(!inputs.sEPO.state && !inputs.sDSBL_FB.state)
+  if(!inputs.sEPO.state && !inputs.sDSBL_FB.state && mgmt.bEnableFromMaster && (mgmt.systemState == STATE_CHARGE_ONLY || mgmt.systemState == STATE_OPERATIONAL))
   {
       rowOut.bOut_MCU_EN = 1;
+
+	  if(b1S_flg)
+	  {
+	    enableL2H = mgmt.bEnableFromMaster;
+	  }
+
+	  if(enableL2H)
+		    mgmt.batt_State = BATT_CONNECTED;
+
+	  else
+		    mgmt.batt_State = BATT_TURNING_ON;
+
+
   }
   else
-      rowOut.bOut_MCU_EN = 0;
+  {
+	  rowOut.bOut_MCU_EN = 0;
+	  mgmt.batt_State = BATT_OFF;
+	  enableL2H = 0;
+	  if(mgmt.systemState == STATE_OPERATIONAL)
+		  mgmt.batt_State = BATT_FAILED;
 
- 
-  //idCodeHandle();
-  
+  }
+
+  if(mgmt.sLowVbatt.state || mgmt.sDisbalance.state )
+  {
+      rowOut.bOut_MCU_EN = 0;
+	  mgmt.batt_State = BATT_FAILED;
+	  enableL2H = 0;
+	  if(mgmt.systemState == STATE_OPERATIONAL)
+	  		  mgmt.batt_State = BATT_FAILED;
+  }
 
   //CommWDHandle();
-
  
 }
-
 
 
 static HeaterState_t heaterState = HEATER_OFF;
@@ -171,18 +194,25 @@ static void checkTempDelta(uint32_t deltaTemp)
 static void chargerAndSwitchControl()
 {
   //NEW CODE
-  if(!rowIn.bIn_HeaterDisable || !rowOut.bOut_Charge_Sw_En )
+  if(!rowOut.bOut_Heater_En && !rowOut.bOut_Charge_Sw_En )
   {
     rowOut.bOut_dCh_EN1 = 0;
     rowOut.bOut_dCh_EN2 = 0;
   }
   
-  if(rowIn.bIn_HeaterDisable || rowOut.bOut_Charge_Sw_En )
-        rowOut.bOut_dCh_EN2 = 1;
+  else if(rowOut.bOut_Heater_En  && rowOut.bOut_Charge_Sw_En )
+  {
+      rowOut.bOut_dCh_EN1 = 1;
+      rowOut.bOut_dCh_EN2 = 1;
 
-  if(rowIn.bIn_HeaterDisable && rowOut.bOut_Charge_Sw_En )
-        rowOut.bOut_dCh_EN1 = 1;
+  }
   
+  else
+  {
+       rowOut.bOut_dCh_EN1 = 0;
+       rowOut.bOut_dCh_EN2 = 1;
+  }
+
   // TODO: Inrush protection
   if(rowOut.bOut_dCh_EN1 || rowOut.bOut_dCh_EN2)
   {
@@ -219,14 +249,14 @@ static void chargerAndSwitchControl()
        
     }
    //TODO : handle o_Charge and raise DISBALANCE
-   if(rowIn.bIn_dO_Charge) // modify this to debounce
-   {
-     if(rowOut.bOut_MCU_EN)
-       mgmt.sDisbalance.state = 1; 
-   }
-   else
-       mgmt.sDisbalance.state = 0; 
- 
+//   if(rowIn.bIn_dO_Charge) // modify this to debounce
+//   {
+//     if(rowOut.bOut_MCU_EN)
+//       mgmt.sDisbalance.state = 1;
+//   }
+//   else
+//       mgmt.sDisbalance.state = 0;
+//
   
 }
 
@@ -234,13 +264,16 @@ static void manageBattCharge()
 {
   if(!mgmt.sLowVbatt.state)
   {
-   ConservativeDebounce(&mgmt.sLowVbatt,rowOut.bOut_MCU_EN && anIn.vBatt < VOLTAGE(32) , 20 * T_1SEC, 1);
+   ConservativeDebounce(&mgmt.sLowVbatt,rowOut.bOut_MCU_EN && anIn.vBatt < VOLTAGE(32) , 10 * T_1SEC, 1);
    if(mgmt.sLowVbatt.state)
-     rowOut.bOut_MCU_EN = 0;
+   {
+	   mgmt.batt_SOC = SOC(0);
+
+   }
   }
        
    // save to eeprom
-  persData.BattCharge = anIn.charger;
+  //persData.BattCharge = anIn.charger; // To be calculated
 }
 
 void outputsUpate()
@@ -535,7 +568,23 @@ static void idCodeHandle() //TODO: maybe use this instead of battery decode?
 //  }
 }
 
-         
+void Resistance_Process(uint32_t R_mOhm)
+{
+    int32_t temp = (anIn.temp1 + anIn.temp2) / 2;
+
+    if (R_mOhm > RESISTANCE_MAX_MOHM)
+        mgmt.bResistanceFault = 1;
+    else
+        mgmt.bResistanceFault = 0;
+
+    //TODO: save data to EEPROM
+//    PersistentData.resistance = R_mOhm;
+//    PersistentData.deltaV = resMon.deltaV_mV;
+//    PersistentData.deltaI = resMon.deltaI_mA;
+//    PersistentData.temp = temp;
+//
+//    SavePersistentData();
+}
 
 static void protectionLimitsUpdate()
 {
@@ -567,6 +616,7 @@ void mgmtInit()
   
   // TODO: READ FROM EEPROM!!
   mgmt.commState = 1;
+  mgmt.batt_State = BATT_OFF;
   readID();
   loadPersistentData();
   //same params as in SCPI *RST

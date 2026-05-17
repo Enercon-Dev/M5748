@@ -34,7 +34,7 @@ namespace M1787_Monitor
 
         public void geHpfStatusTel()
         {
-            RequestTelCommand(0x81, "Get Status Tel");
+            RequestTelCommand(0x20, "Get Status Tel");
         }
 
         public void SetOutputControl(bool[] outputs)

@@ -22,7 +22,7 @@ namespace M1787_Monitor
             {
                 //new TelDecodeMap(0x80, "ACK/NACK", null, 0),
                // new TelDecodeMap(0x81, "HPF Status Tel", decodeHPFStatusTel, HPF_STATUS_TEL_LENGTH),
-               new TelDecodeMap(0x81, "HPF Status Tel", decodeHPFStatusTel, 10),
+               new TelDecodeMap(0x20, "HPF Status Tel", decodeHPFStatusTel, 10),
 
                 new TelDecodeMap(0x82, "ISO Status Tel", decodeIsoTel, ISO_TEL_LENGTH),
                 new TelDecodeMap(0x83, "Buck Status Tel", decodeBuckTel, BUCK_TEL_LENGTH),
@@ -35,6 +35,7 @@ namespace M1787_Monitor
         public void DecodeTelemetry(IFrame frame)
         {
             DataBuffer buffer = new DataBuffer(frame.GetDataBuffer());
+             int source  = buffer.getByte();
             int opCode = buffer.getByte();
 
             foreach (TelDecodeMap decode in telDecodeMap)

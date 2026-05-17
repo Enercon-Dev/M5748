@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="M339 Monitor">
+</Property><Property Name="Solution File" Value="D:\C-sharp Projects\M339 New Monitor\M339 Monitor\M339 Monitor.sln">
+</Property><Property Name="Date" Value="יום שלישי 04 דצמבר 2012">
+</Property><Property Name="Time" Value="19:41">
+</Property></Properties><Event ErrorLevel="0" Project="M339 Monitor" Source="M339 Monitor.csproj" Description="Project converted successfully">
+</Event><Event ErrorLevel="3" Project="M339 Monitor" Source="M339 Monitor.csproj" Description="Converted">
+</Event><Event ErrorLevel="0" Project="" Source="M339 Monitor.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="M339 Monitor.sln" Description="Converted">
+</Event><Event ErrorLevel="0" Project="M339 Monitor" Source="M339 Monitor.csproj" Description="Scan complete: Upgrade not required for project files.">
+</Event></UpgradeLog>

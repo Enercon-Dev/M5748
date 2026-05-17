@@ -1,0 +1,188 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using MPS_Tools;
+
+namespace M5748_Monitor
+{
+    public class M5748Frame : BasicFrame
+    {
+        protected override int HeaderLength { get { return 6; } }
+        protected override int TrailerLength { get { return 1; } }
+        protected override int MaxDataLength { get { return 255; } }
+
+        public int Destination = 0x01;
+        public int Sourse = 0x0F;
+
+        private static byte[] crcTable = new byte[256] {
+            0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
+            0x70, 0x77, 0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65, 0x48, 0x4F, 0x46, 0x41, 0x54, 0x53, 0x5A, 0x5D,
+            0xE0, 0xE7, 0xEE, 0xE9, 0xFC, 0xFB, 0xF2, 0xF5, 0xD8, 0xDF, 0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,
+            0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B, 0x82, 0x85, 0xA8, 0xAF, 0xA6, 0xA1, 0xB4, 0xB3, 0xBA, 0xBD,
+            0xC7, 0xC0, 0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2, 0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4, 0xED, 0xEA,
+            0xB7, 0xB0, 0xB9, 0xBE, 0xAB, 0xAC, 0xA5, 0xA2, 0x8F, 0x88, 0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,
+            0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C, 0x35, 0x32, 0x1F, 0x18, 0x11, 0x16, 0x03, 0x04, 0x0D, 0x0A,
+            0x57, 0x50, 0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42, 0x6F, 0x68, 0x61, 0x66, 0x73, 0x74, 0x7D, 0x7A,
+            0x89, 0x8E, 0x87, 0x80, 0x95, 0x92, 0x9B, 0x9C, 0xB1, 0xB6, 0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,
+            0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2, 0xEB, 0xEC, 0xC1, 0xC6, 0xCF, 0xC8, 0xDD, 0xDA, 0xD3, 0xD4,
+            0x69, 0x6E, 0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C, 0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A, 0x43, 0x44,
+            0x19, 0x1E, 0x17, 0x10, 0x05, 0x02, 0x0B, 0x0C, 0x21, 0x26, 0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,
+            0x4E, 0x49, 0x40, 0x47, 0x52, 0x55, 0x5C, 0x5B, 0x76, 0x71, 0x78, 0x7F, 0x6A, 0x6D, 0x64, 0x63,
+            0x3E, 0x39, 0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B, 0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D, 0x14, 0x13,
+            0xAE, 0xA9, 0xA0, 0xA7, 0xB2, 0xB5, 0xBC, 0xBB, 0x96, 0x91, 0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,
+            0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5, 0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3};
+
+
+        //default constructor
+        public M5748Frame()
+        {
+            init(new byte[0], MPS_FrameType.Unknown);
+        }
+
+        //copy constructor
+        public M5748Frame(M5748Frame frame)
+        {
+            buffer = new List<byte>(frame.buffer);
+            type = frame.type;
+            description = frame.description;
+        }
+
+        public M5748Frame(byte[] buffer)
+        {
+            init(buffer, MPS_FrameType.Command);
+        }
+
+        public override IFrame GetFrameCopy()
+        {
+            return new M5748Frame(this);
+        }
+
+        
+        private static byte[] commandMagicNumber = { 0x96, 0xCF, 0xE4, 0xBE };
+        private static byte[] telemMagicNumber = { 0x96, 0xCF, 0xE4, 0xBE };
+
+        protected override void RecalcHeaderTrailer()
+        {
+            if (type == MPS_FrameType.Command)
+            {
+                if (buffer.Count < MinFrameLength)
+                    throw new Exception("Command too short");
+
+                //fill magic number
+                for (int i = 0; i < commandMagicNumber.Length; i++)
+                    buffer[i] = commandMagicNumber[i];
+
+                //fill data length
+                buffer[4] = (byte)(((DataLength+1) & 0xFF));
+                buffer[5] = (byte)((Sourse << 4) | (Destination & 0x0F));
+
+                //fill crc
+                int csum = CalcCSUM(buffer.ToArray(), buffer.Count - TrailerLength);
+                
+                buffer[buffer.Count - 1] = (byte)(csum & 0xFF);
+            }
+            else if (type == MPS_FrameType.Telemetry)
+            {
+                //no nead to change telem. frame
+            }
+            else
+            {
+                //no nead to change unknown frame
+            }
+        }
+
+
+        public static int CalcCSUM(byte[] buffer, int length)
+        {
+            byte CRC = 0;
+
+            for (int counter = 0; counter < length; counter++)
+            {
+                CRC = crcTable[CRC ^ buffer[counter]];
+            }
+            return (CRC);
+        }
+
+
+        public override void PrepareForTransmition()
+        {
+            RecalcHeaderTrailer();
+        }
+
+
+        public override int[] ReadFromStream(byte[] stream)
+        {
+            int[] result = new int[2] { -1, -1 };
+
+            int start = findSubArray(stream, telemMagicNumber);
+            if (start < 0)
+                return result; //magic number not found
+            if (start + MinFrameLength > stream.Length)
+                return result; //not enaugh data in stream
+
+            int dataLength = stream[start+4];
+            int frameLength = MinFrameLength - 1 + dataLength;
+            if (start + frameLength > stream.Length)
+                return result; //not enaugh data in stream
+
+            //frame found
+            result[0] = start;
+            result[1] = frameLength;
+
+            Destination = stream[start + 5] & 0x0F; //is it correct source <-> dest
+            Sourse = (stream[start + 5] >> 4) & 0x0F;
+
+            buffer = new List<byte>(frameLength);
+
+            for (int i = 0; i < frameLength; i++)
+                buffer.Add(stream[start+i]);
+
+            type = MPS_FrameType.Telemetry;
+            return result;
+        }
+
+
+        protected int findSubArray(byte[] array, byte[] subArray)
+        {
+            int i;
+            for (i = 0; i < array.Length - subArray.Length; i++)
+            {
+                int j;
+                for (j = 0; j < subArray.Length; j++)
+                {
+                    if (array[i + j] != subArray[j])
+                        break;
+                }
+                if (j == subArray.Length)
+                    break;
+            }
+
+            if (i < array.Length - subArray.Length)
+                return i;
+            else
+                return -1;
+        }
+
+        public override bool CsumOk()
+        {
+            int csum = buffer[buffer.Count - 1];
+
+            if (csum == CalcCSUM(buffer.ToArray(), buffer.Count - 1))
+                return true;
+            else
+                return false;
+        }
+
+        public override bool LengthOk()
+        {
+            int dataLength = buffer[4];
+
+            if (MinFrameLength + dataLength == buffer.Count)
+                return true;
+            else
+                return false;
+        }
+
+    }
+}

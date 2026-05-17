@@ -30,17 +30,13 @@ Communication speed increased from 100mSec to 50mSec:
   based on M5521 v1.04
 
 */
-#ifdef M5480
-#define VERSION_STR "d0.01"
-#else
-#define VERSION_STR "d1.01"
-#endif
-
-#define VERSION_MAJOR (0)
-#define VERSION_MINOR (1)
 
 
-//#define SOFTWARE_VERSION 0x0002
-//#define SOFTWARE_VERSION_STR "M5477-1 Control v0.01"
+
+
+
+#define SOFTWARE_VERSION 0x0004
+#define INTERFACE_VERISION 0x00
+#define SOFTWARE_VERSION_STR "M5748-601 Batt v0.04"
 
 #endif //_VERSION_H_

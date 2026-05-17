@@ -17,6 +17,10 @@
 #define OPCODE_CHANGE_BOOT   0x14
 #define OPCODE_READ_MEMORY   0x52
 
+// Messages for Master
+#define OPCODE_MASTER_BATT_CMD   0x03
+//#define OPCODE_DELTA_I_RESPONSE_TEL  0x31
+
 //--- Telemetries ---
 #define OPCODE_CHARGER_STATUS_TEL  0x81
 #define CHARGER_STATUS_TEL_LENGTH 10
@@ -28,6 +32,7 @@
 #define OPCODE_SOFTWARE_VERSION_TEL 0x8F
 #define OPCODE_READ_MEMORY_TEL 0x91
 #define OPCODE_WRITE_ACK_TEL 0x92
+#define OPCODE_TEL_STATUS_RESP  0x20
 
 extern BatteryType_t battType ;
 
@@ -40,7 +45,7 @@ AckCode decodeCommand(DataBuffer* db, struct TelRequest* tel);
 
 AckCode fillTelemetry(DataBuffer* db, struct TelRequest* tel);
 //AckCode fillControlStatusTel(DataBuffer* db);
-AckCode fillControlStatusTel(DataBuffer* db);
+AckCode fillControlStatusTel(DataBuffer* db  , struct TelRequest* tel);
 AckCode decodeOutputControl(DataBuffer* db);
 
 //Bootloader and SW upload commands

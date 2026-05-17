@@ -29,13 +29,27 @@
 #define SR_NORM_FP_SWITCH    BIT(2)
 #define SR_NORM_SCPI_COMMAND BIT(3)
 
-#define BATT_BLOCK_TEMP        (10 * 10)    // 10.0°C
-#define BATT_HEAT_ON_TEMP      (15 * 10)    // 15.0°C
+#define BATT_BLOCK_TEMP        (10 * 10)    // 10.0ï¿½C
+#define BATT_HEAT_ON_TEMP      (15 * 10)    // 15.0ï¿½C
 #define HEATER_MAX_TEMP_THRESHOLD (50 * 10) // default in  (deg C) X 10 will be  TBD!
 #define HEATER_MIN_VOLTAGE_THRESHOLD (20) //min heater voltage voltage - DEFAULT IS TBD!
 #define HEATER_COOLDOWN_TIMEOUT_S   (240)
 #define SENSOR_DELTA_TEMP      (15*10)
 #define SENSOR_CHECK_TIME_S   (240)
+
+typedef enum {
+ BATT_OFF = 0,
+ BATT_TURNING_ON,
+ BATT_CONNECTED,
+ BATT_FAILED
+}Batt_State_t;
+
+typedef enum{
+ STATE_OFF,
+ STATE_CHARGE_ONLY,
+ STATE_OPERATIONAL
+
+}System_State_t;
 
 struct Managment
 {
@@ -43,6 +57,8 @@ struct Managment
   int bHeaterProblem;
   int bTempSensorsProblem;
   
+  int bResistanceFault;
+
   //Charger SW 
   int batt_SOC; // state of charge 
   Signal_t sFullBatt;
@@ -82,11 +98,19 @@ struct Managment
   int bPSMode; //PowerSuply Mode (default = Charger Mode)
   int32_t FanCMD;
   
+  // data from master
+  int bEnableFromMaster;
+  int bHeaterTestFromMaster;
+  System_State_t systemState;
+  uint16_t qCharge;
+  uint16_t qDischarge;
   
   //unit managment
   Signal_t sEnableHPF;
   Signal_t sInputReleyEn;
   Signal_t sHpfEn;
+  Batt_State_t batt_State;
+
   int bOutputReady; //old name: bOutputEnable
   int bOutputEnable;
   int bFaultDetected;

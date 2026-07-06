@@ -1,0 +1,5 @@
+../Core/App/RowIO.c:43:17:readA2D	24	static
+../Core/App/RowIO.c:20:6:readDigitalInputs	16	static
+../Core/App/RowIO.c:33:6:writeDigitalOutputs	16	static
+../Core/App/RowIO.c:98:10:tempConvert	8	static
+../Core/App/RowIO.c:67:6:readAnalogInputs	8	static

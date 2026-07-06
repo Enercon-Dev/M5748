@@ -1,0 +1,10 @@
+../Core/App/flash_if.c:59:6:FLASH_If_Init	8	static
+../Core/App/flash_if.c:77:10:FLASH_If_Erase	40	static
+../Core/App/flash_if.c:120:10:FLASH_If_Write	24	static
+../Core/App/flash_if.c:163:10:FLASH_If_GetWriteProtectionStatus	0	static
+../Core/App/flash_if.c:200:10:FLASH_If_WriteProtectionConfig	64	static
+../Core/App/flash_if.c:245:10:crc32b	16	static
+../Core/App/flash_if.c:263:5:checkFlashCrc	8	static
+../Core/App/flash_if.c:301:6:bVerifyBlockIndex	0	static
+../Core/App/flash_if.c:322:6:bVerifyBlockEmpty	0	static
+../Core/App/flash_if.c:343:8:writeBlock	24	static

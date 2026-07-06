@@ -211,7 +211,7 @@
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/main.pbi
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/main.pbi.dep
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/main.xcl
-/MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/startup_stm32f103xb.o
+
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/stm32f1xx_hal_cortex.o
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/stm32f1xx_hal_cortex.pbi
 /MCU/BootLoader/M5748-BL/EWARM/M5748-BL/Obj/stm32f1xx_hal_cortex.pbi.dep
@@ -344,7 +344,7 @@
 /MCU/EWARM/M5748/Obj/RowIO.pbi
 /MCU/EWARM/M5748/Obj/RowIO.pbi.dep
 /MCU/EWARM/M5748/Obj/RowIO.xcl
-/MCU/EWARM/M5748/Obj/startup_stm32f103xb.o
+
 /MCU/EWARM/M5748/Obj/stm32f1xx_hal_adc_ex.o
 /MCU/EWARM/M5748/Obj/stm32f1xx_hal_adc_ex.pbi
 /MCU/EWARM/M5748/Obj/stm32f1xx_hal_adc_ex.pbi.dep
@@ -765,9 +765,7 @@
 /MCU/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.d
 /MCU/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.o
 /MCU/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.su
-/MCU/CUBEIDE M5748/Debug/Core/Startup/startup_stm32f103cbtx.d
-/MCU/CUBEIDE M5748/Debug/Core/Startup/startup_stm32f103cbtx.o
-/MCU/CUBEIDE M5748/Debug/Core/Startup/subdir.mk
+
 /MCU/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /MCU/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
 /MCU/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
@@ -942,9 +940,7 @@
 /MCU/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.d
 /MCU/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.o
 /MCU/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.su
-/MCU/CUBEIDE M5748/Release/Core/Startup/startup_stm32f103cbtx.d
-/MCU/CUBEIDE M5748/Release/Core/Startup/startup_stm32f103cbtx.o
-/MCU/CUBEIDE M5748/Release/Core/Startup/subdir.mk
+
 /MCU/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /MCU/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
 /MCU/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
@@ -1492,9 +1488,7 @@
 /M5748_COM/BACKUP/CUBE IDE/Debug/Core/Src/system_stm32f1xx.d
 /M5748_COM/BACKUP/CUBE IDE/Debug/Core/Src/system_stm32f1xx.o
 /M5748_COM/BACKUP/CUBE IDE/Debug/Core/Src/system_stm32f1xx.su
-/M5748_COM/BACKUP/CUBE IDE/Debug/Core/Startup/startup_stm32f103cbtx.d
-/M5748_COM/BACKUP/CUBE IDE/Debug/Core/Startup/startup_stm32f103cbtx.o
-/M5748_COM/BACKUP/CUBE IDE/Debug/Core/Startup/subdir.mk
+
 /M5748_COM/BACKUP/CUBE IDE/Debug/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/subdir.mk
 /M5748_COM/BACKUP/CUBE IDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /M5748_COM/BACKUP/CUBE IDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
@@ -1657,9 +1651,7 @@
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.d
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.o
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.su
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/startup_stm32f103cbtx.d
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/startup_stm32f103cbtx.o
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/subdir.mk
+
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.cyclo
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.d
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o
@@ -1931,9 +1923,7 @@
 /M5748_COM/CUBE IDE/Debug/Core/Src/system_stm32f1xx.d
 /M5748_COM/CUBE IDE/Debug/Core/Src/system_stm32f1xx.o
 /M5748_COM/CUBE IDE/Debug/Core/Src/system_stm32f1xx.su
-/M5748_COM/CUBE IDE/Debug/Core/Startup/startup_stm32f103cbtx.d
-/M5748_COM/CUBE IDE/Debug/Core/Startup/startup_stm32f103cbtx.o
-/M5748_COM/CUBE IDE/Debug/Core/Startup/subdir.mk
+
 /M5748_COM/CUBE IDE/Debug/Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/subdir.mk
 /M5748_COM/CUBE IDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /M5748_COM/CUBE IDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
@@ -2169,9 +2159,7 @@
 /MCU/BACKUP/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.d
 /MCU/BACKUP/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.o
 /MCU/BACKUP/CUBEIDE M5748/Debug/Core/Src/system_stm32f1xx.su
-/MCU/BACKUP/CUBEIDE M5748/Debug/Core/Startup/startup_stm32f103cbtx.d
-/MCU/BACKUP/CUBEIDE M5748/Debug/Core/Startup/startup_stm32f103cbtx.o
-/MCU/BACKUP/CUBEIDE M5748/Debug/Core/Startup/subdir.mk
+
 /MCU/BACKUP/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /MCU/BACKUP/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
 /MCU/BACKUP/CUBEIDE M5748/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
@@ -2289,9 +2277,7 @@
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.d
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.o
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Src/system_stm32f1xx.su
-/MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/startup_stm32f103cbtx.d
-/MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/startup_stm32f103cbtx.o
-/MCU/BootLoader/M5748-BL/CubeIDE/Debug/Core/Startup/subdir.mk
+
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.cyclo
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.d
 /MCU/BootLoader/M5748-BL/CubeIDE/Debug/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o
@@ -2493,9 +2479,7 @@
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.d
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.o
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.su
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/startup_stm32f103cbtx.d
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/startup_stm32f103cbtx.o
-/M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/subdir.mk
+
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.cyclo
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.d
 /M5748_COM/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o
@@ -2686,9 +2670,8 @@
 /MCU/BACKUP/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.d
 /MCU/BACKUP/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.o
 /MCU/BACKUP/CUBEIDE M5748/Release/Core/Src/system_stm32f1xx.su
-/MCU/BACKUP/CUBEIDE M5748/Release/Core/Startup/startup_stm32f103cbtx.d
-/MCU/BACKUP/CUBEIDE M5748/Release/Core/Startup/startup_stm32f103cbtx.o
-/MCU/BACKUP/CUBEIDE M5748/Release/Core/Startup/subdir.mk
+
+
 /MCU/BACKUP/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.cyclo
 /MCU/BACKUP/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.d
 /MCU/BACKUP/CUBEIDE M5748/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.o
@@ -2802,9 +2785,7 @@
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.d
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.o
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Src/system_stm32f1xx.su
-/MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/startup_stm32f103cbtx.d
-/MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/startup_stm32f103cbtx.o
-/MCU/BootLoader/M5748-BL/CubeIDE/Release/Core/Startup/subdir.mk
+
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.cyclo
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.d
 /MCU/BootLoader/M5748-BL/CubeIDE/Release/Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.o

@@ -1,0 +1,2 @@
+../Core/App/Communication/CAN/SAE_J1939/SAE_J1939-73_Diagnostics_Layer/DM16.c:18:25:SAE_J1939_Send_Binary_Data_Transfer_DM16	6
+../Core/App/Communication/CAN/SAE_J1939/SAE_J1939-73_Diagnostics_Layer/DM16.c:59:6:SAE_J1939_Read_Binary_Data_Transfer_DM16	2

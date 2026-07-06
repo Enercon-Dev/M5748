@@ -1,0 +1,7 @@
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Debug\M5521SwUpdater.Properties.Resources.resources
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Debug\M5521SwUpdater.csproj.GenerateResource.Cache
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\bin\Debug\M5521SwUpdater.exe
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\bin\Debug\M5521SwUpdater.pdb
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Debug\M5521SwUpdater.exe
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Debug\M5521SwUpdater.pdb
+D:\C-sharp Projects\M5521 SwUpdater\UpsSwUpdater\obj\Debug\M5521SwUpdater.csprojResolveAssemblyReference.cache

@@ -20,6 +20,10 @@ volatile int newCanMsgReceived = 0;
 uint8_t count = 0;
 extern J1939 j1939;
 extern int TP_Prop_A_MsgReceived;
+static void Build_ALPS_Status1(uint8_t* data); // for debug only YZ
+static void Build_ALPS_Analog_Status(uint8_t* data); // for debug only YZ
+
+
 
 HAL_StatusTypeDef STM32_PLC_CAN_Transmit(uint8_t TxData[],
 		CAN_TxHeaderTypeDef *TxHeader) {
@@ -79,7 +83,25 @@ void STM32_PLC_CAN_Get_ID_Data(uint32_t *ID, uint8_t data[],
 //	}
 //
 //}
+void SendPeriodicProp_B()
+{
+	if(b250mS_flg)
+		{
+		    b250mS_flg = 0;
 
+		    // ALPS STATUS1
+		    Build_ALPS_Status1(j1939.this_proprietary.proprietary_B[0].data);
+
+		    CAN_Send_Proprietary_B(&j1939, PGN_ALPS_STATUS1);
+
+
+		    // ALPS ANALOG STATUS
+		    Build_ALPS_Analog_Status(j1939.this_proprietary.proprietary_B[1].data);
+
+		    CAN_Send_Proprietary_B(&j1939, PGN_ALPS_ANALOG_STATUS);
+
+		}
+}
 void CAN_Poll_Task(void) {
 	rxMsgType = Open_SAE_J1939_Listen_For_Messages(&j1939);
 
@@ -103,13 +125,6 @@ void CAN_Poll_Task(void) {
 			}
 		}
 	}
-
-	if(b250mS_flg)
-	{
-		// TODO:send prop_B messages here
-		//SAE_J1939_Response_Request_Proprietary_B
-	}
-
 
 
 }
@@ -141,5 +156,53 @@ void CAN_SendProprietary_A() {
 	SAE_J1939_Response_Request_Proprietary_A(&j1939,
 			j1939.from_other_ecu_proprietary.proprietary_A.from_ecu_address);
 
+}
+
+void CAN_Send_Proprietary_B(J1939* j1939,   uint32_t PGN) // YZ
+{
+    struct Proprietary_B * proprietary_B = Get_Proprietary_B_By_PGN( &j1939->this_proprietary,PGN);
+
+    if(proprietary_B == NULL)
+        return ;
+
+    uint32_t ID =
+        (0x18UL << 24) |
+        (PGN << 8) |
+        j1939->information_this_ECU.this_ECU_address;
+
+     CAN_Send_Message(ID,proprietary_B->data);
+}
+
+static void Build_ALPS_Status1(uint8_t* data)
+{
+    memset(data, 0xFF, 8);
+
+    data[0] = 0;
+    data[3] = 0x00;
+    data[5] = 0xFF;
+    data[6] = 0xFF;
+    data[7] = 0xFF;
+}
+
+static void Build_ALPS_Analog_Status(uint8_t* data)
+{
+    memset(data, 0xFF, 8);
+
+    uint16_t vin     = 1;
+    uint16_t vright  = 2;
+    uint16_t vleft   = 3;
+    uint16_t vmbd    = 4;
+
+    data[0] = vin & 0xFF;
+    data[1] = vin >> 8;
+
+    data[2] = vright & 0xFF;
+    data[3] = vright >> 8;
+
+    data[4] = vleft & 0xFF;
+    data[5] = vleft >> 8;
+
+    data[6] = vmbd & 0xFF;
+    data[7] = vmbd >> 8;
 }
 

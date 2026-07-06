@@ -1,0 +1,2 @@
+../Core/App/Communication/CAN/SAE_J1939/SAE_J1939-21_Transport_Layer/Transport_Protocol_Connection_Management.c:62:25:SAE_J1939_Send_Transport_Protocol_Connection_Management	6
+../Core/App/Communication/CAN/SAE_J1939/SAE_J1939-21_Transport_Layer/Transport_Protocol_Connection_Management.c:14:6:SAE_J1939_Read_Transport_Protocol_Connection_Management	6

@@ -1,0 +1,5 @@
+../Core/App/RowIO.c:43:17:readA2D	2
+../Core/App/RowIO.c:20:6:readDigitalInputs	1
+../Core/App/RowIO.c:33:6:writeDigitalOutputs	1
+../Core/App/RowIO.c:98:10:tempConvert	1
+../Core/App/RowIO.c:67:6:readAnalogInputs	1

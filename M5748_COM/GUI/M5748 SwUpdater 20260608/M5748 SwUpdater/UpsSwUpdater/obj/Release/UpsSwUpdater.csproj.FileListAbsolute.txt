@@ -1,0 +1,9 @@
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\bin\Release\UpsSwUpdater.exe
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\bin\Release\UpsSwUpdater.pdb
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\obj\Release\ResolveAssemblyReference.cache
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.Properties.Resources.resources
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.csproj.GenerateResource.Cache
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.exe
+C:\C-sharp Projects\UpsSwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.pdb
+C:\C-sharp Projects\M339 SwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.exe
+C:\C-sharp Projects\M339 SwUpdater\UpsSwUpdater\obj\Release\UpsSwUpdater.pdb

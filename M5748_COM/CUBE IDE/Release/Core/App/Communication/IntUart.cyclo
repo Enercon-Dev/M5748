@@ -1,0 +1,10 @@
+../Core/App/Communication/IntUart.c:49:6:uart_EnableTranceiver	1
+../Core/App/Communication/IntUart.c:101:13:uart_TxComplete_Callback	1
+../Core/App/Communication/IntUart.c:88:6:uart_Enable	1
+../Core/App/Communication/IntUart.c:119:6:uart_Send	1
+../Core/App/Communication/IntUart.c:135:5:uart_bIsTransmitting	1
+../Core/App/Communication/IntUart.c:150:5:uart_bIsRecived	2
+../Core/App/Communication/IntUart.c:163:5:uart_bRecivedBytesNum	3
+../Core/App/Communication/IntUart.c:175:9:uart_GetByte	5
+../Core/App/Communication/IntUart.c:204:24:uart_GetStatistics	1
+../Core/App/Communication/IntUart.c:210:6:ClearStatistics	1

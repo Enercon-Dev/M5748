@@ -1,0 +1,6 @@
+../Core/App/general.c:44:9:CalcCRC	2
+../Core/App/general.c:79:6:DebounceWithHysteresis	8
+../Core/App/general.c:127:6:Debounce	4
+../Core/App/general.c:154:6:ConservativeDebounce	1
+../Core/App/general.c:161:6:SetDebounce	2
+../Core/App/general.c:177:10:linearAproximation	5

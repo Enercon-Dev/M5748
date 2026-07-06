@@ -183,6 +183,7 @@ int main(void)
       //TP_LED1(b100mS_gate);
 
       updateTimingVar();
+     // SendPeriodicProp_B();
       readDigitalInputs();
       readAnalogInputs();
       debounceDigitalInputs();
@@ -198,6 +199,8 @@ int main(void)
       Telemetry_Handler();
       writeDigitalOutputs();
     }
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

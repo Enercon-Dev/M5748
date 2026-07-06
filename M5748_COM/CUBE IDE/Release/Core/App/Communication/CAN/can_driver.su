@@ -1,0 +1,6 @@
+../Core/App/Communication/CAN/can_driver.c:24:19:STM32_PLC_CAN_Transmit	16	static
+../Core/App/Communication/CAN/can_driver.c:30:6:STM32_PLC_CAN_Get_ID_Data	56	static
+../Core/App/Communication/CAN/can_driver.c:83:6:CAN_Poll_Task	16	static
+../Core/App/Communication/CAN/can_driver.c:116:13:CanGetFrame	0	static
+../Core/App/Communication/CAN/can_driver.c:126:13:can_getTxBuffer	0	static
+../Core/App/Communication/CAN/can_driver.c:137:6:CAN_SendProprietary_A	0	static

@@ -1,0 +1,19 @@
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.exe.config
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.exe
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.pdb
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.Properties.Resources.resources
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.csproj.GenerateResource.Cache
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.exe
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.pdb
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.csprojResolveAssemblyReference.cache
+D:\C-sharp Projects\M5748 SwUpdater\UpsSwUpdater\bin\Debug\PCANBasic.dll
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\bin\Debug\PCANBasic.dll
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.exe.config
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.exe
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\bin\Debug\M5748SwUpdater.pdb
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.csproj.AssemblyReference.cache
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.Properties.Resources.resources
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.csproj.GenerateResource.cache
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.csproj.CoreCompileInputs.cache
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.exe
+C:\Projects\M5748\M5748_COM\GUI\M5748 SwUpdater 20260608\M5748 SwUpdater\UpsSwUpdater\obj\Debug\M5748SwUpdater.pdb

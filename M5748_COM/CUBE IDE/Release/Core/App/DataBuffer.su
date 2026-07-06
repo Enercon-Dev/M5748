@@ -1,0 +1,17 @@
+../Core/App/DataBuffer.c:6:5:getRemainingLength	0	static
+../Core/App/DataBuffer.c:11:5:getPosition	0	static
+../Core/App/DataBuffer.c:16:6:setPosition	0	static
+../Core/App/DataBuffer.c:31:6:fillByte	0	static
+../Core/App/DataBuffer.c:40:6:fillShort	8	static
+../Core/App/DataBuffer.c:50:6:fillShort_LE	0	static
+../Core/App/DataBuffer.c:60:6:fillLong	8	static
+../Core/App/DataBuffer.c:72:6:fillLong_LE	0	static
+../Core/App/DataBuffer.c:84:6:fillLongAsShort	0	static
+../Core/App/DataBuffer.c:92:9:int32ToInt16	0	static
+../Core/App/DataBuffer.c:102:6:fillArray	16	static
+../Core/App/DataBuffer.c:111:6:fillStringFixed	16	static
+../Core/App/DataBuffer.c:131:6:fillString	16	static
+../Core/App/DataBuffer.c:152:9:getByte	0	static
+../Core/App/DataBuffer.c:162:10:getShort	8	static
+../Core/App/DataBuffer.c:173:10:getLong	8	static
+../Core/App/DataBuffer.c:186:6:getArray	16	static

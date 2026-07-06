@@ -1,0 +1,4 @@
+../Core/App/Timing.c:13:6:updateTimingVar	20	static
+../Core/App/Timing.c:63:6:shortDelay	8	static
+../Core/App/Timing.c:89:5:startDelay	0	static
+../Core/App/Timing.c:94:5:isDeleyEnded	0	static

@@ -14,5 +14,8 @@ DataBuffer* CanGetFrame();
 DataBuffer* can_getTxBuffer();
 void CAN_SendProprietary_A();
 void CAN_Poll_Task(void);
+void CAN_Send_Proprietary_B();
+
+
 
 #endif /* APP_COMMUNICATION_CANBUS_CAN_DRIVER_H_ */

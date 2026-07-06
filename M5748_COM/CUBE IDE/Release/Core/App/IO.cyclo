@@ -1,0 +1,2 @@
+../Core/App/IO.c:11:6:debounceDigitalInputs	1
+../Core/App/IO.c:20:6:filterAnalogInputs	3

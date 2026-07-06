@@ -1,0 +1,14 @@
+../Core/App/Communication/Command.c:174:9:decodeSetConstCmd	16	static
+../Core/App/Communication/Command.c:356:9:fillSwVersion	16	static
+../Core/App/Communication/Command.c:367:9:fillChargerStatusTel	16	static
+../Core/App/Communication/Command.c:399:9:fillWriteAckTel	8	static
+../Core/App/Communication/Command.c:405:9:fillReadMemoryTel	32	static
+../Core/App/Communication/Command.c:108:9:decodeMasterStatusTel	16	static
+../Core/App/Communication/Command.c:153:9:decodeSwVersion	16	static
+../Core/App/Communication/Command.c:261:9:clearMemCmd	8	static
+../Core/App/Communication/Command.c:278:9:changeBootCmd	8	static
+../Core/App/Communication/Command.c:205:9:writeMemCmd	40	static
+../Core/App/Communication/Command.c:81:9:decodeTelRequestCmd	24	static
+../Core/App/Communication/Command.c:56:9:decodeCommand	16	static
+../Core/App/Communication/Command.c:320:9:fillTelemetry	16	static
+../Core/App/Communication/Command.c:340:6:setTel	8	static

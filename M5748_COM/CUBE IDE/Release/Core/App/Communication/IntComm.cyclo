@@ -1,0 +1,10 @@
+../Core/App/Communication/IntComm.c:62:5:bIsForProcess	5
+../Core/App/Communication/IntComm.c:83:5:bIsForRoutOut	4
+../Core/App/Communication/IntComm.c:159:6:procesIncomingFrame	3
+../Core/App/Communication/IntComm.c:103:6:RoutFrame	5
+../Core/App/Communication/IntComm.c:31:6:Command_Handler	2
+../Core/App/Communication/IntComm.c:257:13:getTxBuffer	2
+../Core/App/Communication/IntComm.c:265:6:lineIsFree	2
+../Core/App/Communication/IntComm.c:271:6:quickSend	2
+../Core/App/Communication/IntComm.c:280:6:processTelemetryRequest	6
+../Core/App/Communication/IntComm.c:234:6:Telemetry_Handler	4

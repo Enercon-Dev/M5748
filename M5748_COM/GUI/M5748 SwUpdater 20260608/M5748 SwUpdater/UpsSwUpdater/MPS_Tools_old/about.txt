@@ -1,0 +1,12 @@
+Ver 2.00 01/05/2011
+this version is used in UPSMonitor v4.01
+
+
+Ver 1.00 22/02/2011
+
+this version is used in SNMPConsol v2.02
+
+
+Ver 0.01 17/11/2010
+
+this is the first, testing version of MPS_Tools

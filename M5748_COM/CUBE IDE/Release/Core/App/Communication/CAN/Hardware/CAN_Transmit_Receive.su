@@ -1,0 +1,5 @@
+../Core/App/Communication/CAN/Hardware/CAN_Transmit_Receive.c:79:25:CAN_Send_Message	48	static
+../Core/App/Communication/CAN/Hardware/CAN_Transmit_Receive.c:120:25:CAN_Send_Request	48	static
+../Core/App/Communication/CAN/Hardware/CAN_Transmit_Receive.c:159:6:CAN_Read_Message	32	static
+../Core/App/Communication/CAN/Hardware/CAN_Transmit_Receive.c:188:6:CAN_Set_Callback_Functions	0	static
+../Core/App/Communication/CAN/Hardware/CAN_Transmit_Receive.c:199:6:CAN_Delay	0	static

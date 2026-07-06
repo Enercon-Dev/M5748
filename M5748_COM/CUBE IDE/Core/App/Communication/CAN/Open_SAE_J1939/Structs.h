@@ -78,6 +78,8 @@ struct TP_DT {
 	uint8_t data[MAX_TP_DT];						/* This is the collected data we are going to send. Also we are using this as a filler */
 	uint16_t remaining_packages;
 	uint8_t from_ecu_address;						/* From which ECU came this message */
+	uint8_t cts_window_size;
+	uint8_t packets_in_current_window;
 };
 
 /* PGN: 0x00EE00 - Storing the Address claimed from the reading process */

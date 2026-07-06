@@ -1,0 +1,7 @@
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\bin\Debug\M1787SwUpdater.exe
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\bin\Debug\M1787SwUpdater.pdb
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Debug\M1787SwUpdater.Properties.Resources.resources
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Debug\M1787SwUpdater.csproj.GenerateResource.Cache
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Debug\M1787SwUpdater.exe
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Debug\M1787SwUpdater.pdb
+D:\C-sharp Projects\M1787 SwUpdater\UpsSwUpdater\obj\Debug\M1787SwUpdater.csprojResolveAssemblyReference.cache

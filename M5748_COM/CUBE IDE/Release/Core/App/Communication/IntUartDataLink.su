@@ -1,0 +1,9 @@
+../Core/App/Communication/IntUartDataLink.c:27:6:intUart_Handle	40	static
+../Core/App/Communication/IntUartDataLink.c:66:6:intUart_clearTransmitDelay	0	static
+../Core/App/Communication/IntUartDataLink.c:72:13:intUart_getTxBuffer	16	static
+../Core/App/Communication/IntUartDataLink.c:94:6:intUart_LineIsFree	0	static
+../Core/App/Communication/IntUartDataLink.c:101:5:intUart_quickSend	24	static
+../Core/App/Communication/IntUartDataLink.c:140:6:intUart_SendStringBlocking	24	static
+../Core/App/Communication/IntUartDataLink.c:171:13:intUart_receive	40	static
+../Core/App/Communication/IntUartDataLink.c:244:32:intUart_GetStatistics	0	static
+../Core/App/Communication/IntUartDataLink.c:250:6:intUart_ClearStatistics	0	static

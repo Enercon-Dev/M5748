@@ -207,6 +207,7 @@ namespace M5748SwUpdater
                     Console.WriteLine($"TX DT seq={dt[0]}");
                     sentPackets++;
                     //ctsPacketsToSend--;
+                    System.Threading.Thread.Sleep(2);
 
                 }
 

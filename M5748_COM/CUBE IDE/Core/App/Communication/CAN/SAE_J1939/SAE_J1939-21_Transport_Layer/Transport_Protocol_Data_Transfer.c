@@ -30,14 +30,15 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 //	j1939->tp_rx_busy = 1;
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA; // check if source address is valid, else drop the package and return
 	uint8_t i, j, index = data[0] - 1;
-	if(j1939->from_other_ecu_tp_dt.sequence_number == data[0]) // check current package index == current seq number
+	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
+	if(j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1) // check current package index == current seq number
 	{
 		dataValid = 1;
 		for (i = 1; i < 8; i++)
 		{
 			j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i]; /* For every package, we send 7 bytes of data where the first byte data[0] is the sequence number */
 		}
-		j1939->from_other_ecu_tp_dt.sequence_number++;
+
 		/* Check if we have completed our message - Return = Not completed */
 		if(j1939->this_ecu_tp_dt.remaining_packages > 0)
 			j1939->this_ecu_tp_dt.remaining_packages--;
@@ -67,6 +68,8 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	}
 
 	/* Our message are complete - Build it and call it complete_data[total_message_size] */
+	if(j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == j1939->from_other_ecu_tp_dt.packets_in_current_window)
+	{
 	uint32_t PGN = j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message;
 	uint16_t total_message_size = j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted;
 	uint8_t complete_data[MAX_TP_DT];
@@ -134,6 +137,8 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	/* Delete TP DT and TP CM */
 	memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
 	memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	}
+
 }
 
 /*

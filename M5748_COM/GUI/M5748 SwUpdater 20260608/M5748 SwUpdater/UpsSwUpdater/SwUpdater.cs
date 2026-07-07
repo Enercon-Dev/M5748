@@ -244,6 +244,7 @@ namespace M5748SwUpdater
             //write the program
             for (uint addr = startAddress; addr < startAddress + file.Length; addr += WriteBlockSize)
             {
+                //break;
                 int writeSize = WriteBlockSize;
                 int fileOffset = (int)(addr - startAddress);
                 if (fileOffset + WriteBlockSize > file.Length)
@@ -276,11 +277,11 @@ namespace M5748SwUpdater
                 }
 
                 received = cmd_getFirmwareDataBlock(addr, (uint)writeSize);
-                if (!ArrayContain(received,file,fileOffset))
+                if (!ArrayContain(received, file,fileOffset))
                 {
                     throw new VerifyFailExaption("0x" + addr.ToString("X8"));
                 }
-
+                
                 Console.CursorLeft = cursor;
                 int progress = (fileOffset + writeSize) * 100 / file.Length;
                 Console.Write(progress.ToString("D2") + "%  ");

@@ -25,6 +25,9 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	switch (data[0]) {
 	case CONTROL_BYTE_TP_CM_RTS:
 		/* Set the RTS values */
+		if(j1939->tp_rx_busy) // in case another RTS request in received while reading packets
+			return;
+
 		j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
 		j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
 		j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send = data[4]; // YZ
@@ -33,15 +36,14 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 		j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = data[4]; // YZ- was 1
 		j1939->this_ecu_tp_cm.next_packet_number_transmitted = 1;
-		j1939->from_other_ecu_tp_dt.sequence_number = 1; // YZ
 		j1939->this_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
-
-		j1939->from_other_ecu_tp_dt.cts_window_size = 16;
-
 		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
 		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
 		break;
 	case CONTROL_BYTE_TP_CM_CTS:
+		if(j1939->tp_tx_busy)
+			return;
+
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
 		SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
@@ -76,7 +78,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;
 		data[2] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted >> 8;
 		data[3] = j1939->this_ecu_tp_cm.number_of_packages_being_transmitted;
-		data[4] = 0x01; 															/* Max number of packages to be transmitted at once */
+		data[4] = 0x10; 															/* Max number of packages to be transmitted at once */
 		break;
 
 	case CONTROL_BYTE_TP_CM_CTS:

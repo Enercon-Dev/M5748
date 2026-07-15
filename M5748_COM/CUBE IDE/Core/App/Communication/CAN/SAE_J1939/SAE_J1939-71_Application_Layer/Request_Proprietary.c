@@ -25,9 +25,6 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Request_Proprietary_A(J1939* j1939, uint8
  */
 ENUM_J1939_STATUS_CODES SAE_J1939_Response_Request_Proprietary_A(J1939* j1939, uint8_t DA) {
 	/* Find the length of the array fields */
-	if(j1939->tp_tx_busy)
-		return STATUS_SEND_BUSY;
-
 
 	uint16_t length_of_each_field = j1939->this_proprietary.proprietary_A.total_bytes;
 	if (length_of_each_field < 9) {

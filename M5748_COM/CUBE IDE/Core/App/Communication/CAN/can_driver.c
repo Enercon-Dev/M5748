@@ -3,6 +3,8 @@
 #include "Hardware/Hardware.h"
 #include "Open_SAE_J1939/Open_SAE_J1939.h"
 
+#define TP_TIMEOUT_MS 750
+
 extern CAN_HandleTypeDef hcan;
 extern struct TelRequest intTelRequest;
 
@@ -126,7 +128,44 @@ void CAN_Poll_Task(void) {
 		}
 	}
 
+}
+void SAE_J1939_TP_Task(J1939 *j1939) // for j1939 timeouts during tp
+{
+    uint32_t now = HAL_GetTick();
 
+    //-------------------------------------------------
+    // waiting for CTS
+    //-------------------------------------------------
+
+    if(j1939->tp_tx_busy)
+    {
+        if(now - j1939->tp_tx_timer > TP_TIMEOUT_MS)
+        {
+            printf("TP TX timeout\r\n");
+
+            j1939->tp_tx_busy = 0;
+
+            memset(&j1939->this_ecu_tp_dt, 0, sizeof(j1939->this_ecu_tp_dt));
+            memset(&j1939->this_ecu_tp_cm, 0, sizeof(j1939->this_ecu_tp_cm));
+        }
+    }
+
+    //-------------------------------------------------
+    // waiting for TP.DT
+    //-------------------------------------------------
+
+    if(j1939->tp_rx_busy)
+    {
+        if(now - j1939->tp_rx_timer > TP_TIMEOUT_MS)
+        {
+         //   printf("TP RX timeout\r\n");
+
+            j1939->tp_rx_busy = 0;
+
+            memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+            memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+        }
+    }
 }
 DataBuffer* CanGetFrame() {
 	if (!newCanMsgReceived)

@@ -279,6 +279,8 @@ typedef struct {
 	struct TP_DT this_ecu_tp_dt;
 	int          tp_tx_busy; // YZ
 	int          tp_rx_busy; // YZ
+	uint32_t 	 tp_tx_timer;  // YZ
+	uint32_t     tp_rx_timer;  // YZ
 
 	/* Temporary store the valve information from the reading process - ISO 11783-7 */
 	struct Auxiliary_valve_estimated_flow from_other_ecu_auxiliary_valve_estimated_flow[16];

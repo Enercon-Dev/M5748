@@ -129,43 +129,25 @@ void CAN_Poll_Task(void) {
 	}
 
 }
-void SAE_J1939_TP_Task(J1939 *j1939) // for j1939 timeouts during tp
+void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 {
-    uint32_t now = HAL_GetTick();
+	uint32_t now = HAL_GetTick();
 
-    //-------------------------------------------------
-    // waiting for CTS
-    //-------------------------------------------------
+	    if (j1939->tp_rx_busy &&
+	        (now - j1939->tp_rx_t1_timer) > J1939_TP_T1_MS) {
+	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address,
+	                                 j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message, 3); /* 3 = timeout */
+	        memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+	        memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	        j1939->tp_rx_busy = 0;
+	    }
 
-    if(j1939->tp_tx_busy)
-    {
-        if(now - j1939->tp_tx_timer > TP_TIMEOUT_MS)
-        {
-            printf("TP TX timeout\r\n");
-
-            j1939->tp_tx_busy = 0;
-
-            memset(&j1939->this_ecu_tp_dt, 0, sizeof(j1939->this_ecu_tp_dt));
-            memset(&j1939->this_ecu_tp_cm, 0, sizeof(j1939->this_ecu_tp_cm));
-        }
-    }
-
-    //-------------------------------------------------
-    // waiting for TP.DT
-    //-------------------------------------------------
-
-    if(j1939->tp_rx_busy)
-    {
-        if(now - j1939->tp_rx_timer > TP_TIMEOUT_MS)
-        {
-         //   printf("TP RX timeout\r\n");
-
-            j1939->tp_rx_busy = 0;
-
-            memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-            memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-        }
-    }
+	    if (j1939->tp_tx_busy &&
+	        (now - j1939->tp_tx_t2_timer) > J1939_TP_T2_MS) {
+	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,
+	                                 j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
+	        j1939->tp_tx_busy = 0;
+	    }
 }
 DataBuffer* CanGetFrame() {
 	if (!newCanMsgReceived)

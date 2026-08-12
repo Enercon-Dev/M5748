@@ -13,10 +13,10 @@ namespace M5748SwUpdater
         SerialComm comm;
         private const string BattFirmewareVersion = "1.00";
         private const string MasterFirmewareVersion = "1.00";
-        private const string ChargerFirmewareVersion = "1.00";
+        private const string ChargerFirmewareVersion = "1.05";
         private byte[] BattProgFile = M5748SwUpdater.Properties.Resources.M5748_Batt_v1_00;
         private byte[] MasterProgFile = M5748SwUpdater.Properties.Resources.M5748_Master_v1_00;
-        private byte[] ChargerProgFile = M5748SwUpdater.Properties.Resources.M5748_Com_v1_00;
+        private byte[] ChargerProgFile = M5748SwUpdater.Properties.Resources.M5748_Com_v1_05;
 #warning Do not forget to change the "FirmewareVersion" string !!!
 
         SerialComm.CommAddress[] moduleAddr = new SerialComm.CommAddress[] { SerialComm.CommAddress.Master, SerialComm.CommAddress.Charger, SerialComm.CommAddress.Batt1, SerialComm.CommAddress.Batt2, SerialComm.CommAddress.Batt3, SerialComm.CommAddress.Batt4, SerialComm.CommAddress.Batt5, SerialComm.CommAddress.Batt6 };

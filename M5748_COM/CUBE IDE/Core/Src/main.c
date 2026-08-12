@@ -176,7 +176,7 @@ int main(void)
   while (1)
   {
       CAN_Poll_Task();
-    //  SAE_J1939_TP_Task(&j1939);
+      SAE_J1939_TP_Timeout_Task(&j1939);
 
     if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE))
     {

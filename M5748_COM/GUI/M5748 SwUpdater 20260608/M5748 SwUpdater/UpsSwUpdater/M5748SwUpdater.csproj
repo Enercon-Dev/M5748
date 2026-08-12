@@ -92,7 +92,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="Resources\M5748_Batt_v1.00_crc.bin" />
-    <None Include="Resources\M5748_Com_v1.00_crc.bin" />
+    <None Include="Resources\M5748_Com_v1.05_crc.bin" />
     <None Include="Resources\M5748_Master_v1.00_crc.bin" />
   </ItemGroup>
   <ItemGroup>

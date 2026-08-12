@@ -53,6 +53,14 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
 	//	SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
 		break;
+
+	case CONTROL_BYTE_TP_CM_ABORT:
+	    /* Peer aborted -- tear down both directions and clear busy flags */
+	    memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+	    memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	    j1939->tp_rx_busy = 0;
+	    j1939->tp_tx_busy = 0;
+	    break;
 	case CONTROL_BYTE_TP_CM_EndOfMsgACK:
 		j1939->from_other_ecu_tp_cm.total_number_of_bytes_received = (data[2] << 8) | data[1];
 		j1939->from_other_ecu_tp_cm.total_number_of_packages_received = data[3];
@@ -109,4 +117,12 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 	data[7] = j1939->this_ecu_tp_cm.PGN_of_the_packeted_message >> 16;
 
 	return CAN_Send_Message(ID, data);
+}
+
+ENUM_J1939_STATUS_CODES SAE_J1939_Send_TP_Abort(J1939 *j1939, uint8_t DA,
+                                                  uint32_t PGN, uint8_t reason) {
+    uint32_t ID = (0x1CEC << 16) | (DA << 8) | j1939->information_this_ECU.this_ECU_address;
+    uint8_t data[8] = { CONTROL_BYTE_TP_CONN_ABORT, reason, 0xFF, 0xFF, 0xFF,
+                        (uint8_t)PGN, (uint8_t)(PGN >> 8), (uint8_t)(PGN >> 16) };
+    return CAN_Send_Message(ID, data);
 }

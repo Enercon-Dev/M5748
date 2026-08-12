@@ -20,64 +20,34 @@ int TP_Prop_A_MsgReceived = 0;
  */
 void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[]) {
 	/* Save the sequence data */
-
-//	if(j1939->tp_rx_busy)
-//	{
-//	    // reject second TP
-//	    return;
-//	}
-//
 	uint8_t dataValid = 0;
 	j1939->tp_rx_busy = 1;
-	j1939->tp_rx_timer = HAL_GetTick();
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA; // check if source address is valid, else drop the package and return
 	uint8_t i, j, index = data[0] - 1;
 	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
-	if(j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1) // check current package index == current seq number
+	if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1)
 	{
-		dataValid = 1;
-		for (i = 1; i < 8; i++)
-		{
-			j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i]; /* For every package, we send 7 bytes of data where the first byte data[0] is the sequence number */
-		}
+	    dataValid = 1;
+	    for (i = 1; i < 8; i++)
+	        j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i];
+	    if (j1939->this_ecu_tp_dt.remaining_packages > 0)
+	        j1939->this_ecu_tp_dt.remaining_packages--;
+	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
+	    j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
 
-		/* Check if we have completed our message - Return = Not completed */
-		if(j1939->this_ecu_tp_dt.remaining_packages > 0)
-			j1939->this_ecu_tp_dt.remaining_packages--;
 
-		j1939->from_other_ecu_tp_dt.packets_in_current_window++;
-//		if(j1939->from_other_ecu_tp_dt.packets_in_current_window >= j1939->from_other_ecu_tp_dt.cts_window_size)
-//		{
-//			j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-//			j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.sequence_number;
-//			SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-//			j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
-//		}
+	}
+	else {
+	    /* Out-of-order: request the missing packet via a targeted CTS */
+	        j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+	        j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->this_ecu_tp_dt.remaining_packages;
+	        j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+	        SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
+	        j1939->tp_rx_t1_timer = HAL_GetTick();
+
+	    return;   /* don't advance state on invalid packet */
 	}
 
-//	else // In case packets are out of order, retransmit CTS from the last packet received - YZ
-//	{
-//		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-//		j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-//		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-//	}
-
-	if (j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted != j1939->from_other_ecu_tp_dt.sequence_number || j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == 0)
-	{
-		if (j1939->from_other_ecu_tp_cm.control_byte == CONTROL_BYTE_TP_CM_RTS) {//TODO: change this to send ACK once  a certain package size transmitted, and not after every single package
-
-			if(j1939->this_ecu_tp_dt.remaining_packages <= 0 || dataValid == 0)
-			{
-				j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-				j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-
-				if(dataValid == 0)
-					j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = 1;
-				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-			}
-		}
-		return;
-	}
 
 	/* Our message are complete - Build it and call it complete_data[total_message_size] */
 	if(j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == j1939->from_other_ecu_tp_dt.packets_in_current_window)
@@ -93,7 +63,6 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 			}
 		}
 	}
-	  j1939->tp_rx_timer = HAL_GetTick();
 	// send back to M5748 application code
 	//TODO: add tp PGN switch case
 	// TP_OnFullMessage(complete_data, inserted_bytes); // J1939 Transport Protocol
@@ -151,6 +120,20 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
 	}
 
+	else // if we didnt read all packets yet
+	{
+		//TODO: change this to send ACK once  a certain package size transmitted, and not after every single package
+
+	    			if(j1939->this_ecu_tp_dt.remaining_packages <= 0 )
+	    			{
+	    				j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+	    				j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
+	    				j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+	    				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
+
+	    			}
+	}
+
 }
 
 /*
@@ -165,7 +148,6 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 
 
 	j1939->tp_tx_busy = 1;
-	j1939->tp_tx_timer = HAL_GetTick();
 
 	switch (j1939->from_other_ecu_tp_cm.control_byte) {
 //	case CONTROL_BYTE_TP_CM_BAM:
@@ -228,8 +210,11 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 
 	        HAL_Delay(2);
 	    }
-
-	    j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
+	    if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
+	        j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
+	    else
+	        j1939->tp_tx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
+  	         j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
 	    		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
 	    		break;
 	}

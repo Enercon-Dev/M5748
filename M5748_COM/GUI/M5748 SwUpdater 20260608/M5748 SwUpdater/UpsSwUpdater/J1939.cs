@@ -40,6 +40,56 @@ namespace M5748SwUpdater
         private ushort Channel = 81;
         private byte ctsPacketsToSend;
         private byte ctsNextSeq;
+        private bool ctsLive = false;
+     
+
+        private byte[] currentTransmitData;
+        private int currentTransmitLength;
+        private int currentTransmitTotalPackets;
+        private int txNextSequence = 1;
+        private readonly object txLock = new object();
+
+        private bool tpTxActive = false;
+
+        const uint TP_T1_MS = 750;
+        const uint TP_T2_MS = 1250;
+        const uint TP_T3_MS = 1250;
+        private System.Timers.Timer rxT1Timer;
+        bool debug = true;
+        private void StartT1()
+        {
+            if (debug)
+                return;
+            if (rxT1Timer == null)
+            {
+                rxT1Timer = new System.Timers.Timer { AutoReset = false };
+                rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
+            }
+            rxT1Timer.Stop();
+            rxT1Timer.Interval = TP_T1_MS;
+            rxT1Timer.Start();
+        }
+
+        private void OnT1Timeout()
+        {
+            Console.WriteLine("T1 timeout waiting for TP.DT -- sending Abort");
+            SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
+            RxState.ExpectedLength = 0;
+            RxState.Received = 0;
+        }
+
+        private void SendAbort(byte da, uint pgn, byte reason)
+        {
+            byte savedDa = DestinationAddress;
+            DestinationAddress = da;
+            byte[] d = new byte[8] {
+        0xFF, reason, 0xFF, 0xFF, 0xFF,
+        (byte)pgn, (byte)(pgn >> 8), (byte)(pgn >> 16)
+    };
+            SendCan(TP_CM, d);
+            DestinationAddress = savedDa;
+        }
+
 
         public J1939(byte sa, byte da)
         {
@@ -50,7 +100,7 @@ namespace M5748SwUpdater
         private Queue<J1939Message> completedMessages = new Queue<J1939Message>();
         private AutoResetEvent messageEvent = new AutoResetEvent(false);
         private AutoResetEvent ctsEvent = new AutoResetEvent(false);
-        private TpRxState state = new TpRxState();
+        private TpRxState RxState = new TpRxState();
 
    
         public delegate void NewPduRecivedHandler(object sender, J1939Message msg);
@@ -162,60 +212,149 @@ namespace M5748SwUpdater
             int length = data.Length;
             int totalPackets = (length + 6) / 7;
 
-            ctsPacketsToSend = 0; //close the window so we will wait for the first CTS before starting the transmition
-            sendRTS(length, pgn);
-
-            int sentPackets = 0; //next packet to be sent (zero based index)
-
-            while (sentPackets < totalPackets)
+            lock (txLock)
             {
-                // WAIT FOR CTS
-                int ctsTimeout = 2000;
-                if (ctsPacketsToSend > 0)
-                    ctsTimeout = 1; //the transmit window is still open, just check if there is a CTS
+                currentTransmitData = data.ToArray();
+                currentTransmitLength = length;
+                currentTransmitTotalPackets = totalPackets;
+                tpTxActive = true;
+            }
 
-                if (ctsEvent.WaitOne())
+            try
+            {
+                ctsPacketsToSend = 0;
+
+                sendRTS(length, pgn);
+
+                int sentPackets = 0;
+
+                while (sentPackets < totalPackets)
                 {
-                    //CTS received - update the next packet accordig to CTS request
-                    //TODO: handel concuret access to ctsNextSeq and ctsPacketsToSend
-                    if (ctsNextSeq > 0) //ctsNextSeq is a one based index
-                        sentPackets = ctsNextSeq - 1;
+                    /*
+                     * Wait for CTS.
+                     *
+                     * The first CTS opens the first transmission window.
+                     * A subsequent CTS can either:
+                     *
+                     * 1. Continue with a new window
+                     * 2. Request retransmission of an earlier packet
+                     */
 
-                    if (sentPackets >= totalPackets)
-                        break;
-                }
-                else if (ctsTimeout > 1)
-                {
-                    throw new Exception("CTS timeout");
-                }
-
-                for (int i = 0; i < ctsPacketsToSend && sentPackets < totalPackets; i++)
-                {
-                    byte[] dt = new byte[8];
-                    dt[0] = (byte)(sentPackets + 1); //sentPackets transmitted as one based index
-
-                    for (int j = 0; j < 7; j++) //fill data
+                    if (!ctsEvent.WaitOne())
                     {
-                        int index = sentPackets * 7 + j;
-                        if (index < length)
-                            dt[1 + j] = data[index];
-                        else
-                            dt[1 + j] = 0xFF;
+                        throw new Exception("CTS timeout");
                     }
 
-                    SendCan(0xEB00, dt);
-                    Console.WriteLine($"TX DT seq={dt[0]}");
-                    sentPackets++;
-                    //ctsPacketsToSend--;
-                    System.Threading.Thread.Sleep(2);
+                    byte requestedSeq;
+                    byte packetsToSend;
 
+                    lock (txLock)
+                    {
+                        requestedSeq = ctsNextSeq;
+                        packetsToSend = ctsPacketsToSend;
+                    }
+
+                    if (requestedSeq == 0 || requestedSeq > totalPackets)
+                        throw new Exception($"Invalid CTS sequence {requestedSeq}");
+
+                    /*
+                     * CTS may request a sequence number earlier than the
+                     * packet we currently consider sent.
+                     *
+                     * Example:
+                     *
+                     * sentPackets = 4
+                     * CTS nextSeq = 3
+                     *
+                     * => retransmit packet 3 and continue 
+                     */
+
+                    if (requestedSeq - 1 < sentPackets)
+                    {
+                        Console.WriteLine(
+                            $"CTS retransmission request: seq={requestedSeq}");
+                    }
+
+                    /*
+                     * Normal forward transmission.
+                     */
+
+                    sentPackets = requestedSeq - 1;
+
+                    for (int i = 0;
+                         i < packetsToSend && sentPackets < totalPackets;
+                         i++)
+                    {
+                        byte seq = (byte)(sentPackets + 1);
+
+                        SendTpDataPacket(
+                            seq,
+                            currentTransmitData,
+                            currentTransmitLength);
+                        txNextSequence = seq + 1;
+                        sentPackets++;
+
+                        Thread.Sleep(2);
+                    }
                 }
 
-                //note: we close the connection before receining an EndOfMsgACK which is not correct and may lead to lost of data
-                // in case some last packets are lost and the other side did not had the time to send CTS with a retransmition request
+                /*
+                 * IMPORTANT:
+                 *
+                 * Do NOT finish the transmission here.
+                 *
+                 * We still need to receive the EndOfMsgACK.
+                 */
+
+                Console.WriteLine("All TP.DT packets transmitted. Waiting for EOM ACK.");
+
+                // Wait for EOM ACK here if you have a TX completion event.
+            }
+            finally
+            {
+                lock (txLock)
+                {
+                    /*
+                     * Don't clear this immediately if you still need
+                     * retransmission requests after the final packet.
+                     *
+                     * Prefer clearing it when EOM ACK is received.
+                     */
+                }
             }
         }
+        public byte DebugSkipSeq = 8;        // 0 = disabled, else the seq to skip once
+        private bool debugSkipConsumed = false;
+        private void SendTpDataPacket(byte sequence,byte[] data,int length)
+        {
 
+            // Debug: simulate a lost packet on the first transmission of this seq
+            if (DebugSkipSeq != 0 && sequence == DebugSkipSeq && !debugSkipConsumed)
+            {
+                debugSkipConsumed = true;
+                Console.WriteLine($"[DEBUG] Skipping DT seq={sequence} to simulate packet loss");
+                return;   // deliberately do not transmit
+            }
+            byte[] dt = new byte[8];
+
+            dt[0] = sequence;
+
+            int offset = (sequence - 1) * 7;
+
+            for (int i = 0; i < 7; i++)
+            {
+                int index = offset + i;
+
+                if (index < length)
+                    dt[i + 1] = data[index];
+                else
+                    dt[i + 1] = 0xFF;
+            }
+
+            SendCan(TP_DT, dt);
+            Console.WriteLine(
+                $"TX DT seq={sequence}");
+        }
 
         public void SendBamMessage(uint pgn, byte[] data)
         {
@@ -376,74 +515,136 @@ namespace M5748SwUpdater
             {
                 if (data[0] == 0x20)  // check BAM = 0x20 
                 {
-                    state.ProtocolBAM = true;
-                    state.ExpectedLength = data[1] | (data[2] << 8);
+                    RxState.ProtocolBAM = true;
+                    RxState.ExpectedLength = data[1] | (data[2] << 8);
                     int rxPgn = data[5] | (data[6]<<8) | (data[7] << 16);
-                    state.Pgn = (uint)rxPgn;
-                    state.Source = sa;
-                    state.Received = 0;
+                    RxState.Pgn = (uint)rxPgn;
+                    RxState.Source = sa;
+                    RxState.Received = 0;
 
                     //Console.WriteLine($"BAM: size={state.ExpectedLength}");
                 }
                 else if (data[0] == 0x10) //RTS
                 {
-                    state.ProtocolBAM = false;
-                    state.ExpectedLength = data[1] | (data[2] << 8);
+                    RxState.ProtocolBAM = false;
+                    RxState.ExpectedLength = data[1] | (data[2] << 8);
                     //data[3] - Total number of packets
-                    state.MaxPackets = data[4]; //Maximum number of packets that can be sent in response to one CTS
+                    RxState.MaxPackets = data[4]; //Maximum number of packets that can be sent in response to one CTS
                     int rxPgn = data[5] | (data[6] << 8) | (data[7] << 16); //PGN
-                    state.Pgn = (uint)rxPgn;
-                    state.Source = sa;
-                    state.Received = 0;
+                    RxState.Pgn = (uint)rxPgn;
+                    RxState.Source = sa;
+                    RxState.Received = 0;
                     sendCTS();
+                    //StartT1();
                 }
 
-                else if (data[0] == 0x11) // or cts = 0x11
+                else if (data[0] == 0x11) // CTS
                 {
-                    ctsPacketsToSend = data[1];
-                    ctsNextSeq = data[2];
-                    Console.WriteLine($"CTS: allow={ctsPacketsToSend} next={ctsNextSeq}");
-                    ctsEvent.Set(); // SIGNAL sender
+                    byte requestedPackets = data[1];
+                    byte requestedSequence = data[2];
+
+                    Console.WriteLine($"CTS: allow={requestedPackets} next={requestedSequence}");
+
+
+                    bool retransmission = false;
+
+                    lock (txLock)
+                    {
+                        /*
+                         * If the requested sequence is behind the sequence
+                         * we have already transmitted, this is a retransmission.
+                         */
+                        if (tpTxActive &&
+                            requestedSequence > 0 &&
+                            requestedSequence < txNextSequence)
+                        {
+                            retransmission = true;
+                        }
+
+                        ctsPacketsToSend = requestedPackets;
+                        ctsNextSeq = requestedSequence;
+                    }
+
+                    if (retransmission)
+                    {
+                        Console.WriteLine(
+                            $"CTS indicates missing packet -> retransmit seq={requestedSequence}");
+                        ctsEvent.Set();
+
+                        //SendTpDataPacket(
+                        //    requestedSequence,
+                        //    currentTransmitData,
+                        //    currentTransmitLength);
+
+                        /*
+                         * Do NOT change sentPackets.
+                         *
+                         * The original transmission session continues.
+                         */
+                        retransmission = false;
+                        return;
+                    }
+                    else
+                    {
+                        /*
+                         * Normal CTS.
+                         */
+                        ctsEvent.Set();
+                    }
                 }
             }
             else if (pgn == 0xEB00) // TP_DT
             {
-                if (state.ExpectedLength <= 0)
+                if (RxState.ExpectedLength <= 0)
                     return; //conection not initialized
-                if (state.Source != sa)
+                if (RxState.Source != sa)
                     return; //packet received not from the expected source
 
                 int SequenceNumber = data[0];
                 int DataOffset = (SequenceNumber-1) * 7;
 
-                if (DataOffset != state.Received)
+                if (DataOffset != RxState.Received)
                 {
                     //packet received out of order - drop it
                     //if the protocol is RTS/CTS send CTS with the requiered Sequence Number
                     //if the protocol is BAM the conection should probably be dropd - not implemented yet
-                    if (!state.ProtocolBAM)
+                    if (!RxState.ProtocolBAM)
+                    {
                         sendCTS();
+                        //StartT1();
+                    }
                     return;
                 }
 
                 for (int i = 1; i < 8; i++)
                 {
-                    if (state.Received < state.ExpectedLength)
-                        state.Buffer[state.Received++] = data[i];
+                    if (RxState.Received < RxState.ExpectedLength)
+                        RxState.Buffer[RxState.Received++] = data[i];
                 }
 
-                if (state.Received >= state.ExpectedLength && state.ExpectedLength != 0)
+                if (RxState.Received >= RxState.ExpectedLength && RxState.ExpectedLength != 0)
                 {
                     //reception completed
-                    byte[] result = new byte[state.ExpectedLength];
-                    Array.Copy(state.Buffer, result, state.ExpectedLength);
-                    if (!state.ProtocolBAM)
+                    byte[] result = new byte[RxState.ExpectedLength];
+                    Array.Copy(RxState.Buffer, result, RxState.ExpectedLength);
+                    if (!RxState.ProtocolBAM)
                         sendEOM_ACK();
-                    state.ExpectedLength = 0;
+                    RxState.ExpectedLength = 0;
+
+                    rxT1Timer?.Stop(); // STOP T1 timer
+
+                    lock (txLock)
+                    {
+                        tpTxActive = false;
+                        currentTransmitData = null;
+                        currentTransmitLength = 0;
+                        currentTransmitTotalPackets = 0;
+                        txNextSequence = 1;
+                    }
 
                     RaisePdu(new J1939Message
                     {
-                        Pgn = state.Pgn,
+                        Pgn = RxState.Pgn,
                         Source = sa,
                         Destination = ps,
                         Data = result
@@ -454,11 +655,20 @@ namespace M5748SwUpdater
                 {
                     //reception not completed
                     //a CTS message is sent when the last data packet requested in the previous CTS message has been received.
-                    if (state.RemainingPackets > 1)
-                        state.RemainingPackets--;
+                    if (RxState.RemainingPackets > 1)
+                        RxState.RemainingPackets--;
                     else
+                    {
                         sendCTS();
+                       // StartT1();
+                    }
                 }
+            }
+
+            else if (pgn == 0xFF)
+            {
+                tpTxActive = false;
+                RxState = new TpRxState();
             }
             else
             {
@@ -482,7 +692,7 @@ namespace M5748SwUpdater
             rts[1] = (byte)(length & 0xFF);
             rts[2] = (byte)((length >> 8) & 0xFF);
             rts[3] = (byte)totalPackets;
-            rts[4] = 16; // max packets per CTS
+            rts[4] = 4; // max packets per CTS
 
             rts[5] = (byte)(pgn & 0xFF);
             rts[6] = (byte)((pgn >> 8) & 0xFF);
@@ -491,38 +701,77 @@ namespace M5748SwUpdater
             SendCan(0xEC00, rts);
         }
 
+        //private void sendCTS()
+        //{
+        //    byte[] data = new byte[8];
+
+        //    data[0] = 0x11; // CTS
+        //    data[1] = state.MaxPackets; //Number of packets that can be sent.This value shall be no larger than the value in byte 5 of the RTS message.
+        //    data[2] = (byte)(state.Received / 7 + 1); //Next packet number to be sent
+        //    data[3] = 0xFF;
+        //    data[4] = 0xFF;
+        //    data[5] = (byte)(state.Pgn & 0xFF);
+        //    data[6] = (byte)((state.Pgn >> 8) & 0xFF);
+        //    data[7] = (byte)((state.Pgn >> 16) & 0xFF);
+
+        //    state.RemainingPackets = state.MaxPackets;
+        //    SendCan(TP_CM, data);
+        //}
         private void sendCTS()
         {
             byte[] data = new byte[8];
 
-            data[0] = 0x11; // CTS
-            data[1] = state.MaxPackets; //Number of packets that can be sent.This value shall be no larger than the value in byte 5 of the RTS message.
-            data[2] = (byte)(state.Received / 7 + 1); //Next packet number to be sent
+            byte nextSequence =
+                (byte)(RxState.Received / 7 + 1);
+
+            data[0] = 0x11;
+
+            /*
+             * Normal window.
+             */
+            data[1] = RxState.MaxPackets;
+
+            /*
+             * First packet expected.
+             */
+            data[2] = nextSequence;
+
             data[3] = 0xFF;
             data[4] = 0xFF;
-            data[5] = (byte)(state.Pgn & 0xFF);
-            data[6] = (byte)((state.Pgn >> 8) & 0xFF);
-            data[7] = (byte)((state.Pgn >> 16) & 0xFF);
 
-            state.RemainingPackets = state.MaxPackets;
+            data[5] = (byte)(RxState.Pgn & 0xFF);
+            data[6] = (byte)((RxState.Pgn >> 8) & 0xFF);
+            data[7] = (byte)((RxState.Pgn >> 16) & 0xFF);
+
+            RxState.RemainingPackets = RxState.MaxPackets;
+
+            Console.WriteLine(
+                $"TX CTS: allow={data[1]} next={data[2]}");
+
             SendCan(TP_CM, data);
+            StartT1();
         }
-
 
         private void sendEOM_ACK()
         {
             byte[] data = new byte[8];
 
             data[0] = 0x13; // End_of_Message Acknowledge
-            data[1] = (byte)(state.Received & 0xFF); //Total message size, number of bytes
-            data[2] = (byte)((state.Received >> 8) & 0xFF);
-            data[3] = (byte)((state.Received + 6) / 7); //Total number of packets
+            data[1] = (byte)(RxState.Received & 0xFF); //Total message size, number of bytes
+            data[2] = (byte)((RxState.Received >> 8) & 0xFF);
+            data[3] = (byte)((RxState.Received + 6) / 7); //Total number of packets
             data[4] = 0xFF;
-            data[5] = (byte)(state.Pgn & 0xFF);
-            data[6] = (byte)((state.Pgn >> 8) & 0xFF);
-            data[7] = (byte)((state.Pgn >> 16) & 0xFF);
+            data[5] = (byte)(RxState.Pgn & 0xFF);
+            data[6] = (byte)((RxState.Pgn >> 8) & 0xFF);
+            data[7] = (byte)((RxState.Pgn >> 16) & 0xFF);
 
             SendCan(TP_CM, data);
+        }
+
+        private void sendRemainingData(byte NextSeq)
+        {
+            byte[] dt = new byte[8];
+            SendCan(0xEB00, dt);
         }
 
     }

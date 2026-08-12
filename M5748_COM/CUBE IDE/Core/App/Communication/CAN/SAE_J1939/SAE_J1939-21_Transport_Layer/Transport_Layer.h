@@ -25,6 +25,11 @@
 extern "C" {
 #endif
 
+//YakirZ
+#define CONTROL_BYTE_TP_CONN_ABORT   0xFF
+#define J1939_TP_T1_MS   750
+#define J1939_TP_T2_MS   1250
+#define J1939_TP_T3_MS   1250
 
 /* Acknowledgement */
 void SAE_J1939_Read_Acknowledgement(J1939 *j1939, uint8_t SA, uint8_t data[]);
@@ -37,7 +42,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Request(J1939 *j1939, uint8_t DA, uint32_
 /* Transport Protocol Connection Management */
 void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8_t SA, uint8_t data[]);
 ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(J1939 *j1939, uint8_t DA);
-
+ENUM_J1939_STATUS_CODES SAE_J1939_Send_TP_Abort(J1939 *j1939, uint8_t DA,uint32_t PGN, uint8_t reason); // yakirZ
 /* Transport Protocol Data Transfer */
 void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[]);
 ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t DA);

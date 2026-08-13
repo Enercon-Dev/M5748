@@ -28,7 +28,7 @@ namespace M5748SwUpdater
         public int Received;
         public byte[] Buffer = new byte[2048];
     }
-  
+
 
     public class J1939
     {
@@ -41,7 +41,7 @@ namespace M5748SwUpdater
         private byte ctsPacketsToSend;
         private byte ctsNextSeq;
         private bool ctsLive = false;
-     
+
 
         private byte[] currentTransmitData;
         private int currentTransmitLength;
@@ -50,10 +50,11 @@ namespace M5748SwUpdater
         private readonly object txLock = new object();
 
         private bool tpTxActive = false;
-
+        private bool lastCtsWasHold = false;
         const uint TP_T1_MS = 750;
-        const uint TP_T2_MS = 1250;
-        const uint TP_T3_MS = 1250;
+        const int TP_T2_MS = 1250;   // sender waits for next CTS
+        const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
+        const int TP_T4_MS = 1050;   // sender waits after CTS(hold, packets=0)
         private System.Timers.Timer rxT1Timer;
         bool debug = true;
         private void StartT1()
@@ -100,9 +101,10 @@ namespace M5748SwUpdater
         private Queue<J1939Message> completedMessages = new Queue<J1939Message>();
         private AutoResetEvent messageEvent = new AutoResetEvent(false);
         private AutoResetEvent ctsEvent = new AutoResetEvent(false);
+        private AutoResetEvent eomEvent = new AutoResetEvent(false);
         private TpRxState RxState = new TpRxState();
 
-   
+
         public delegate void NewPduRecivedHandler(object sender, J1939Message msg);
         public event NewPduRecivedHandler NewPduRecived;
 
@@ -178,8 +180,8 @@ namespace M5748SwUpdater
             if (data.Length <= 8)
                 SendCan(pgn, data);
             else
-               SendTpRtsCts(pgn, data);
-               //SendBamMessage(pgn, data);
+                SendTpRtsCts(pgn, data);
+            //SendBamMessage(pgn, data);
         }
 
         private void SendCan(uint pgn, byte[] data)
@@ -222,7 +224,7 @@ namespace M5748SwUpdater
 
             try
             {
-                ctsPacketsToSend = 0;
+                //ctsPacketsToSend = 0;
 
                 sendRTS(length, pgn);
 
@@ -240,9 +242,23 @@ namespace M5748SwUpdater
                      * 2. Request retransmission of an earlier packet
                      */
 
-                    if (!ctsEvent.WaitOne())
+                    // Determine which timeout is active right now
+                    int timeoutMs;
+                    if (sentPackets >= totalPackets)
+                        timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck
+                    else if (lastCtsWasHold)
+                        timeoutMs = TP_T4_MS;                    // waiting after CTS(0,...)
+                    else
+                        timeoutMs = TP_T2_MS;                    // waiting for next CTS
+
+                    if (!ctsEvent.WaitOne(timeoutMs))
                     {
-                        throw new Exception("CTS timeout");
+                        string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
+                                        lastCtsWasHold ? "T4 (hold)" : "T2 (CTS)";
+                        Console.WriteLine($"{phase} timeout -- sending Abort");
+                        SendAbort(DestinationAddress, pgn, 3 /* timeout */);
+                        lock (txLock) { tpTxActive = false; }
+                        throw new Exception($"{phase} timeout");
                     }
 
                     byte requestedSeq;
@@ -252,6 +268,8 @@ namespace M5748SwUpdater
                     {
                         requestedSeq = ctsNextSeq;
                         packetsToSend = ctsPacketsToSend;
+                        if (packetsToSend == 0)
+                            continue;   // CTS(0,...) means "hold" -- loop back to wait for next CTS under T4
                     }
 
                     if (requestedSeq == 0 || requestedSeq > totalPackets)
@@ -266,7 +284,7 @@ namespace M5748SwUpdater
                      * sentPackets = 4
                      * CTS nextSeq = 3
                      *
-                     * => retransmit packet 3 and continue 
+                     * => retransmit packet 3
                      */
 
                     if (requestedSeq - 1 < sentPackets)
@@ -308,6 +326,12 @@ namespace M5748SwUpdater
 
                 Console.WriteLine("All TP.DT packets transmitted. Waiting for EOM ACK.");
 
+                if (!eomEvent.WaitOne(TP_T3_MS))
+                {
+                    SendAbort(DestinationAddress, pgn, 3);
+                    lock (txLock) { tpTxActive = false; }
+                    throw new Exception("T3 (EOM_ACK) timeout");
+                }
                 // Wait for EOM ACK here if you have a TX completion event.
             }
             finally
@@ -323,9 +347,9 @@ namespace M5748SwUpdater
                 }
             }
         }
-        public byte DebugSkipSeq = 8;        // 0 = disabled, else the seq to skip once
+        public byte DebugSkipSeq = 0;        // 0 = disabled, else the seq to skip once
         private bool debugSkipConsumed = false;
-        private void SendTpDataPacket(byte sequence,byte[] data,int length)
+        private void SendTpDataPacket(byte sequence, byte[] data, int length)
         {
 
             // Debug: simulate a lost packet on the first transmission of this seq
@@ -400,7 +424,7 @@ namespace M5748SwUpdater
 
                 SendCan(TP_DT, dt);
 
-                System.Threading.Thread.Sleep(2); 
+                System.Threading.Thread.Sleep(2);
             }
         }
 
@@ -433,60 +457,60 @@ namespace M5748SwUpdater
         }
 
 
-    private uint BuildCanId(uint pgn)
-    {
-    byte pf = (byte)(pgn >> 8);
-    byte ps = (byte)(pgn & 0xFF);
+        private uint BuildCanId(uint pgn)
+        {
+            byte pf = (byte)(pgn >> 8);
+            byte ps = (byte)(pgn & 0xFF);
 
-    byte priority;
+            byte priority;
 
-    // ----------------------------
-    // SELECT PRIORITY (id0)
-    // ----------------------------
-    if (pgn == 0xEC00 || pgn == 0xEB00)
-    {
-        // TP.CM / TP.DT
-        priority = 7; // -> id0 = 0x1C
-    }
-    else if (pf == 0xEF)
-    {
-        // Proprietary A
-        priority = 5; // -> id0 = 0x14
-    }
-    else
-    {
-        // Normal messages
-        priority = 6; // -> id0 = 0x18
-    }
+            // ----------------------------
+            // SELECT PRIORITY (id0)
+            // ----------------------------
+            if (pgn == 0xEC00 || pgn == 0xEB00)
+            {
+                // TP.CM / TP.DT
+                priority = 7; // -> id0 = 0x1C
+            }
+            else if (pf == 0xEF)
+            {
+                // Proprietary A
+                priority = 5; // -> id0 = 0x14
+            }
+            else
+            {
+                // Normal messages
+                priority = 6; // -> id0 = 0x18
+            }
 
-    uint id = 0;
+            uint id = 0;
 
-    if (pf < 240)
-    {
-        // ----------------------------
-        // PDU1 (destination specific)
-        // ----------------------------
-        id = (uint)(
-            (priority << 26) |
-            (pf << 16) |
-            (DestinationAddress << 8) |
-            SourceAddress
-        );
-    }
-    else
-    {
-        // ----------------------------
-        // PDU2 (broadcast)
-        // ----------------------------
-        id = (uint)(
-            (priority << 26) |
-            (pgn << 8) |
-            SourceAddress
-        );
-    }
+            if (pf < 240)
+            {
+                // ----------------------------
+                // PDU1 (destination specific)
+                // ----------------------------
+                id = (uint)(
+                    (priority << 26) |
+                    (pf << 16) |
+                    (DestinationAddress << 8) |
+                    SourceAddress
+                );
+            }
+            else
+            {
+                // ----------------------------
+                // PDU2 (broadcast)
+                // ----------------------------
+                id = (uint)(
+                    (priority << 26) |
+                    (pgn << 8) |
+                    SourceAddress
+                );
+            }
 
-    return id;
-}
+            return id;
+        }
 
 
         private void ProcessFrame(uint id, byte[] data)
@@ -513,17 +537,20 @@ namespace M5748SwUpdater
 
             if (pgn == TP_CM) // TP_CM (0xEC00)
             {
+
                 if (data[0] == 0x20)  // check BAM = 0x20 
                 {
                     RxState.ProtocolBAM = true;
                     RxState.ExpectedLength = data[1] | (data[2] << 8);
-                    int rxPgn = data[5] | (data[6]<<8) | (data[7] << 16);
+                    int rxPgn = data[5] | (data[6] << 8) | (data[7] << 16);
                     RxState.Pgn = (uint)rxPgn;
                     RxState.Source = sa;
                     RxState.Received = 0;
 
                     //Console.WriteLine($"BAM: size={state.ExpectedLength}");
                 }
+      
+
                 else if (data[0] == 0x10) //RTS
                 {
                     RxState.ProtocolBAM = false;
@@ -542,6 +569,14 @@ namespace M5748SwUpdater
                 {
                     byte requestedPackets = data[1];
                     byte requestedSequence = data[2];
+
+                    if (requestedPackets == 0)
+                    {
+                        lastCtsWasHold = true;   // add this field to the class
+                        ctsEvent.Set();          // still wake up the sender so it can re-wait with T4
+                        return;
+                    }
+                    lastCtsWasHold = false;
 
                     Console.WriteLine($"CTS: allow={requestedPackets} next={requestedSequence}");
 
@@ -569,19 +604,10 @@ namespace M5748SwUpdater
                     {
                         Console.WriteLine(
                             $"CTS indicates missing packet -> retransmit seq={requestedSequence}");
+       
+                        retransmission = false;
                         ctsEvent.Set();
 
-                        //SendTpDataPacket(
-                        //    requestedSequence,
-                        //    currentTransmitData,
-                        //    currentTransmitLength);
-
-                        /*
-                         * Do NOT change sentPackets.
-                         *
-                         * The original transmission session continues.
-                         */
-                        retransmission = false;
                         return;
                     }
                     else
@@ -592,6 +618,8 @@ namespace M5748SwUpdater
                         ctsEvent.Set();
                     }
                 }
+                else if (data[0] == 0x13) // EndOfMessage
+                    eomEvent.Set();
             }
             else if (pgn == 0xEB00) // TP_DT
             {
@@ -601,7 +629,7 @@ namespace M5748SwUpdater
                     return; //packet received not from the expected source
 
                 int SequenceNumber = data[0];
-                int DataOffset = (SequenceNumber-1) * 7;
+                int DataOffset = (SequenceNumber - 1) * 7;
 
                 if (DataOffset != RxState.Received)
                 {
@@ -660,16 +688,18 @@ namespace M5748SwUpdater
                     else
                     {
                         sendCTS();
-                       // StartT1();
+                        // StartT1();
                     }
                 }
             }
+         
 
             else if (pgn == 0xFF)
             {
                 tpTxActive = false;
                 RxState = new TpRxState();
             }
+            
             else
             {
                 RaisePdu(new J1939Message
@@ -775,5 +805,5 @@ namespace M5748SwUpdater
         }
 
     }
- 
+
 }

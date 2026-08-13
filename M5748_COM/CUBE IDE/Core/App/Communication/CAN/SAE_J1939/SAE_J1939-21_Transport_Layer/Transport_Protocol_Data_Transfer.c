@@ -132,6 +132,7 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	    				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
 
 	    			}
+
 	}
 
 }

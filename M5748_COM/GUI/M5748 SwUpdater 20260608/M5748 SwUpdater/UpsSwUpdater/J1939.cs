@@ -55,25 +55,24 @@ namespace M5748SwUpdater
         const int TP_T2_MS = 1250;   // sender waits for next CTS
         const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
         const int TP_T4_MS = 1050;   // sender waits after CTS(hold, packets=0)
-        private System.Timers.Timer rxT1Timer;
+        private System.Timers.Timer rxT1Timer = new System.Timers.Timer { AutoReset = false };
         bool debug = true;
         private void StartT1()
         {
-            if (debug)
-                return;
             if (rxT1Timer == null)
             {
-                rxT1Timer = new System.Timers.Timer { AutoReset = false };
-                rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
+                
             }
+            rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
             rxT1Timer.Stop();
             rxT1Timer.Interval = TP_T1_MS;
+           
             rxT1Timer.Start();
         }
 
         private void OnT1Timeout()
         {
-            Console.WriteLine("T1 timeout waiting for TP.DT -- sending Abort");
+            Console.WriteLine("T1 timeout waiting for data packet -- sending Abort");
             SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
             RxState.ExpectedLength = 0;
             RxState.Received = 0;
@@ -245,20 +244,20 @@ namespace M5748SwUpdater
                     // Determine which timeout is active right now
                     int timeoutMs;
                     if (sentPackets >= totalPackets)
-                        timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck
+                        timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck OR CTS
                     else if (lastCtsWasHold)
                         timeoutMs = TP_T4_MS;                    // waiting after CTS(0,...)
                     else
                         timeoutMs = TP_T2_MS;                    // waiting for next CTS
 
-                    if (!ctsEvent.WaitOne(timeoutMs))
+                    if (!ctsEvent.WaitOne(TP_T3_MS))
                     {
-                        string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
-                                        lastCtsWasHold ? "T4 (hold)" : "T2 (CTS)";
-                        Console.WriteLine($"{phase} timeout -- sending Abort");
+                        //string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
+                        //                lastCtsWasHold ? "T4 (hold)" : "T2 (CTS)";
+                        Console.WriteLine("T3 (CTS) timeout -- sending Abort");
                         SendAbort(DestinationAddress, pgn, 3 /* timeout */);
                         lock (txLock) { tpTxActive = false; }
-                        throw new Exception($"{phase} timeout");
+                        throw new Exception("T3 (CTS) timeout ");
                     }
 
                     byte requestedSeq;
@@ -304,6 +303,8 @@ namespace M5748SwUpdater
                          i++)
                     {
                         byte seq = (byte)(sentPackets + 1);
+                        
+                        //Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
 
                         SendTpDataPacket(
                             seq,
@@ -348,14 +349,14 @@ namespace M5748SwUpdater
             }
         }
         public byte DebugSkipSeq = 0;        // 0 = disabled, else the seq to skip once
-        private bool debugSkipConsumed = false;
+        private bool debugSkipFlag = false;
         private void SendTpDataPacket(byte sequence, byte[] data, int length)
         {
 
             // Debug: simulate a lost packet on the first transmission of this seq
-            if (DebugSkipSeq != 0 && sequence == DebugSkipSeq && !debugSkipConsumed)
+            if (DebugSkipSeq != 0 && sequence == DebugSkipSeq && !debugSkipFlag)
             {
-                debugSkipConsumed = true;
+                debugSkipFlag = true;
                 Console.WriteLine($"[DEBUG] Skipping DT seq={sequence} to simulate packet loss");
                 return;   // deliberately do not transmit
             }
@@ -376,8 +377,8 @@ namespace M5748SwUpdater
             }
 
             SendCan(TP_DT, dt);
-            Console.WriteLine(
-                $"TX DT seq={sequence}");
+           // Thread.Sleep((int)TP_T1_MS + 10); // DEBUG: test T1 timeout MCU
+            Console.WriteLine( $"TX DT seq={sequence}");
         }
 
         public void SendBamMessage(uint pgn, byte[] data)
@@ -537,7 +538,6 @@ namespace M5748SwUpdater
 
             if (pgn == TP_CM) // TP_CM (0xEC00)
             {
-
                 if (data[0] == 0x20)  // check BAM = 0x20 
                 {
                     RxState.ProtocolBAM = true;
@@ -562,7 +562,6 @@ namespace M5748SwUpdater
                     RxState.Source = sa;
                     RxState.Received = 0;
                     sendCTS();
-                    //StartT1();
                 }
 
                 else if (data[0] == 0x11) // CTS
@@ -620,9 +619,16 @@ namespace M5748SwUpdater
                 }
                 else if (data[0] == 0x13) // EndOfMessage
                     eomEvent.Set();
+
+                else if (data[0] == 0xff) //Connection abort
+                {
+                    Console.WriteLine("Connection abort received");
+                    return;
+                }
             }
             else if (pgn == 0xEB00) // TP_DT
             {
+                rxT1Timer.Stop();
                 if (RxState.ExpectedLength <= 0)
                     return; //conection not initialized
                 if (RxState.Source != sa)
@@ -630,6 +636,8 @@ namespace M5748SwUpdater
 
                 int SequenceNumber = data[0];
                 int DataOffset = (SequenceNumber - 1) * 7;
+                if (SequenceNumber == 1)
+                    StartT1();
 
                 if (DataOffset != RxState.Received)
                 {
@@ -659,7 +667,7 @@ namespace M5748SwUpdater
                         sendEOM_ACK();
                     RxState.ExpectedLength = 0;
 
-                    rxT1Timer?.Stop(); // STOP T1 timer
+                    
 
                     lock (txLock)
                     {
@@ -778,8 +786,9 @@ namespace M5748SwUpdater
             Console.WriteLine(
                 $"TX CTS: allow={data[1]} next={data[2]}");
 
+            //Thread.Sleep(TP_T3_MS + 10); //DEBUG - test T3 timeout MCU
             SendCan(TP_CM, data);
-            StartT1();
+           // StartT1();
         }
 
         private void sendEOM_ACK()
@@ -794,7 +803,7 @@ namespace M5748SwUpdater
             data[5] = (byte)(RxState.Pgn & 0xFF);
             data[6] = (byte)((RxState.Pgn >> 8) & 0xFF);
             data[7] = (byte)((RxState.Pgn >> 16) & 0xFF);
-
+            //Thread.Sleep(TP_T3_MS + 10); //DEBUG - Test T3 EOM MCU
             SendCan(TP_CM, data);
         }
 

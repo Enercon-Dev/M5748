@@ -13,7 +13,7 @@
 #include "../SAE_J1939-71_Application_Layer/Application_Layer.h"
 extern void TP_OnFullMessage(uint8_t* data, uint16_t length);// J1939 Transport Protocol to M5748
 int TP_Prop_A_MsgReceived = 0;
-
+static uint32_t packetsDeltaTime = 0;
 /*
  * Store the sequence data packages from other ECU
  * PGN: 0x00EB00 (60160)
@@ -21,10 +21,24 @@ int TP_Prop_A_MsgReceived = 0;
 void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[]) {
 	/* Save the sequence data */
 	uint8_t dataValid = 0;
-	j1939->tp_rx_busy = 1;
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA; // check if source address is valid, else drop the package and return
 	uint8_t i, j, index = data[0] - 1;
 	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
+
+	//check timeout T2 at first packet since CTS:
+	if(j1939->from_other_ecu_tp_dt.sequence_number == 1 )
+	{
+		j1939->tp_rx_t1_timer = HAL_GetTick();
+		uint32_t now = HAL_GetTick();
+		if (j1939->tp_rx_busy && (now - j1939->tp_rx_t2_timer) > J1939_TP_T2_MS)
+			    {
+			        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
+			        j1939->tp_rx_busy = 0;
+			    }
+	}
+
+	packetsDeltaTime =  HAL_GetTick() - j1939->tp_rx_t1_timer ;
+
 	if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1)
 	{
 	    dataValid = 1;
@@ -34,6 +48,15 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	        j1939->this_ecu_tp_dt.remaining_packages--;
 	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
 	    j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
+
+	    //check timeout T1 between packets
+	    	 if (  packetsDeltaTime > J1939_TP_T1_MS)
+	    		    {
+	    		        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address,j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message, 3); /* 3 = timeout */
+	    		        memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+	    		        memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	    		        j1939->tp_rx_busy = 0;
+	    		    }
 
 
 	}
@@ -148,8 +171,6 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	ENUM_J1939_STATUS_CODES status = STATUS_SEND_OK;
 
 
-	j1939->tp_tx_busy = 1;
-
 	switch (j1939->from_other_ecu_tp_cm.control_byte) {
 //	case CONTROL_BYTE_TP_CM_BAM:
 //		for (i = 1; i <= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted; i++) {
@@ -203,8 +224,8 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	                package[j+1] = 0xFF;
 	            }
 	        }
-
 	        status = CAN_Send_Message(ID, package);
+	      //  HAL_Delay(760); // Debug - Test T1 timeout C#
 
 //	        if(status != STATUS_SEND_OK)
 //	            return status;
@@ -214,7 +235,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	    if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
 	        j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
 	    else
-	        j1939->tp_tx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
+	        j1939->tp_rx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
   	         j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
 	    		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
 	    		break;

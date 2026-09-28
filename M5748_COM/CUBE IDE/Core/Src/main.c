@@ -181,10 +181,10 @@ int main(void)
     if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE))
     {
       __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-      //TP_LED1(b100mS_gate);
+     // TP_LED1(b100mS_gate);
 
       updateTimingVar();
-     // SendPeriodicProp_B();
+      SendPeriodicProp_B();
       readDigitalInputs();
       readAnalogInputs();
       debounceDigitalInputs();

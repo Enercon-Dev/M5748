@@ -107,19 +107,16 @@ void SendPeriodicProp_B()
 void CAN_Poll_Task(void) {
 	rxMsgType = Open_SAE_J1939_Listen_For_Messages(&j1939);
 
-	if (rxMsgType == RX_MSG_RESP_REQ_PROPRIETARY_A
-			|| TP_Prop_A_MsgReceived == 1) {
+	if (rxMsgType == RX_MSG_RESP_REQ_PROPRIETARY_A || TP_Prop_A_MsgReceived == 1) {
 		TP_Prop_A_MsgReceived = 0;
 
 		if (newCanMsgReceived == 0) {
-			uint16_t dataSize =
-					j1939.from_other_ecu_proprietary.proprietary_A.total_bytes;
+			uint16_t dataSize = j1939.from_other_ecu_proprietary.proprietary_A.total_bytes;
 
-			if (dataSize <= FRAME_MAX_DATA_SIZE
-					&& dataSize >= FRAME_MIN_DATA_SIZE) {
-				memcpy(CanRxData,
-						j1939.from_other_ecu_proprietary.proprietary_A.data,
-						dataSize);
+
+			if (dataSize <= FRAME_MAX_DATA_SIZE && dataSize >= FRAME_MIN_DATA_SIZE) {
+				memcpy(CanRxData,	j1939.from_other_ecu_proprietary.proprietary_A.data, dataSize);
+
 
 				CanRxDataSize = dataSize;
 
@@ -132,22 +129,18 @@ void CAN_Poll_Task(void) {
 void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 {
 	uint32_t now = HAL_GetTick();
+//
 
-	    if (j1939->tp_rx_busy &&
-	        (now - j1939->tp_rx_t1_timer) > J1939_TP_T1_MS) {
-	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address,
-	                                 j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message, 3); /* 3 = timeout */
-	        memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-	        memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-	        j1939->tp_rx_busy = 0;
-	    }
+//
+////T2 is checked at Read_Transport_Protocol_Data_Transfer func
+//
+//	    if (j1939->tp_tx_busy && (now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS)
+//	    {
+//	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
+//	        j1939->tp_tx_busy = 0;
+//	    }
 
-	    if (j1939->tp_tx_busy &&
-	        (now - j1939->tp_tx_t2_timer) > J1939_TP_T2_MS) {
-	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,
-	                                 j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-	        j1939->tp_tx_busy = 0;
-	    }
+
 }
 DataBuffer* CanGetFrame() {
 	if (!newCanMsgReceived)
@@ -174,8 +167,7 @@ void CAN_SendProprietary_A() {
 
 	j1939.this_proprietary.proprietary_A.total_bytes = CanTxDataBuffer.offset;
 	//TODO: check if transport layer buffer is busy transmitting before sending new data
-	SAE_J1939_Response_Request_Proprietary_A(&j1939,
-			j1939.from_other_ecu_proprietary.proprietary_A.from_ecu_address);
+	SAE_J1939_Response_Request_Proprietary_A(&j1939,j1939.from_other_ecu_proprietary.proprietary_A.from_ecu_address);
 
 }
 
@@ -186,10 +178,7 @@ void CAN_Send_Proprietary_B(J1939* j1939,   uint32_t PGN) // YZ
     if(proprietary_B == NULL)
         return ;
 
-    uint32_t ID =
-        (0x18UL << 24) |
-        (PGN << 8) |
-        j1939->information_this_ECU.this_ECU_address;
+    uint32_t ID =(0x18UL << 24) |(PGN << 8) | j1939->information_this_ECU.this_ECU_address;
 
      CAN_Send_Message(ID,proprietary_B->data);
 }

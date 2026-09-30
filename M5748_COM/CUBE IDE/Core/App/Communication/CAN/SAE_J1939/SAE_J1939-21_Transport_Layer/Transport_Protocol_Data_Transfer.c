@@ -194,6 +194,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 //		break;
 	case CONTROL_BYTE_TP_CM_CTS:
 	{
+
 	    uint8_t startSeq = j1939->from_other_ecu_tp_cm.next_packet_number_transmitted;
 
 	    uint8_t packetsToSend =  j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted;

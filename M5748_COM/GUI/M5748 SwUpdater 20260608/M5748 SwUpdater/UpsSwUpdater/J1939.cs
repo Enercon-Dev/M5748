@@ -56,13 +56,10 @@ namespace M5748SwUpdater
         const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
         const int TP_T4_MS = 1050;   // sender waits after CTS(hold, packets=0)
         private System.Timers.Timer rxT1Timer = new System.Timers.Timer { AutoReset = false };
+        private System.Timers.Timer rxT2Timer = new System.Timers.Timer { AutoReset = false };
         bool debug = true;
         private void StartT1()
         {
-            if (rxT1Timer == null)
-            {
-                
-            }
             rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
             rxT1Timer.Stop();
             rxT1Timer.Interval = TP_T1_MS;
@@ -73,6 +70,23 @@ namespace M5748SwUpdater
         private void OnT1Timeout()
         {
             Console.WriteLine("T1 timeout waiting for data packet -- sending Abort");
+            SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
+            RxState.ExpectedLength = 0;
+            RxState.Received = 0;
+        }
+
+        private void StartT2()
+        {
+            rxT2Timer.Elapsed += (s, e) => OnT2Timeout();
+            rxT2Timer.Stop();
+            rxT2Timer.Interval = TP_T2_MS;
+
+            rxT2Timer.Start();
+        }
+
+        private void OnT2Timeout()
+        {
+            Console.WriteLine("T2 timeout waiting for data after CTS -- sending Abort");
             SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
             RxState.ExpectedLength = 0;
             RxState.Received = 0;
@@ -242,13 +256,13 @@ namespace M5748SwUpdater
                      */
 
                     // Determine which timeout is active right now
-                    int timeoutMs;
-                    if (sentPackets >= totalPackets)
-                        timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck OR CTS
-                    else if (lastCtsWasHold)
-                        timeoutMs = TP_T4_MS;                    // waiting after CTS(0,...)
-                    else
-                        timeoutMs = TP_T2_MS;                    // waiting for next CTS
+                    //int timeoutMs;
+                    //if (sentPackets >= totalPackets)
+                    //    timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck OR CTS
+                    //else if (lastCtsWasHold)
+                    //    timeoutMs = TP_T4_MS;                    // waiting after CTS(0,...)
+                    //else
+                    //    timeoutMs = TP_T2_MS;                    // waiting for next CTS
 
                     if (!ctsEvent.WaitOne(TP_T3_MS))
                     {
@@ -304,7 +318,7 @@ namespace M5748SwUpdater
                     {
                         byte seq = (byte)(sentPackets + 1);
                         
-                        //Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
+                       // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
 
                         SendTpDataPacket(
                             seq,
@@ -377,7 +391,7 @@ namespace M5748SwUpdater
             }
 
             SendCan(TP_DT, dt);
-           // Thread.Sleep((int)TP_T1_MS + 10); // DEBUG: test T1 timeout MCU
+            //Thread.Sleep((int)TP_T1_MS + 10); // DEBUG: test T1 timeout MCU
             Console.WriteLine( $"TX DT seq={sequence}");
         }
 
@@ -562,13 +576,14 @@ namespace M5748SwUpdater
                     RxState.Source = sa;
                     RxState.Received = 0;
                     sendCTS();
+                    StartT2();
                 }
 
                 else if (data[0] == 0x11) // CTS
                 {
                     byte requestedPackets = data[1];
                     byte requestedSequence = data[2];
-
+                    
                     if (requestedPackets == 0)
                     {
                         lastCtsWasHold = true;   // add this field to the class
@@ -637,7 +652,11 @@ namespace M5748SwUpdater
                 int SequenceNumber = data[0];
                 int DataOffset = (SequenceNumber - 1) * 7;
                 if (SequenceNumber == 1)
-                    StartT1();
+                {
+                    StartT1(); // start countng time between packets
+                    rxT2Timer.Stop(); // first data packets arrived after sending cts
+
+                }
 
                 if (DataOffset != RxState.Received)
                 {

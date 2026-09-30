@@ -60,6 +60,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
+		//HAL_Delay(1260); // debug -  test T2 C#
 		SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
 		break;
 	case CONTROL_BYTE_TP_CM_BAM:

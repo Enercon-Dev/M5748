@@ -128,7 +128,20 @@ void CAN_Poll_Task(void) {
 }
 void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 {
-	uint32_t now = HAL_GetTick();
+	if(j1939->isTimerCounting)
+	{
+		j1939->timer--;
+		if(j1939->timer <= 0)
+		{
+		    SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
+		    j1939->isTimerCounting = 0;
+		    j1939->tp_tx_busy = 0;
+		    j1939->tp_rx_busy = 0;
+		}
+
+	}
+	else
+		return;
 //
 
 //

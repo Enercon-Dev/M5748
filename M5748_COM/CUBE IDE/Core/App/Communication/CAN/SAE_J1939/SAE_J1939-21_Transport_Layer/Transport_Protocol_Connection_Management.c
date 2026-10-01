@@ -6,7 +6,7 @@
  */
 
 #include "Transport_Layer.h"
-
+#include "Timing.h"
 /*
  * Store information about sequence data packages from other ECU who are going to send to this ECU
  * PGN: 0x00EC00 (60416)
@@ -41,23 +41,16 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
 		//HAL_Delay(1250); // debug - test T3 timeout for C#
 		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-		j1939->tp_rx_t2_timer = HAL_GetTick();
+		//j1939->tp_rx_t2_timer = HAL_GetTick();
+		j1939->isTimerCounting = 1;
+		j1939->timer = J1939_T2_mSEC; // start counting T2
+		j1939->timeoutType = 2;
 		break;
 	case CONTROL_BYTE_TP_CM_CTS:
 		if(j1939->tp_tx_busy)
 			return;
+		j1939->isTimerCounting = 0; // stop t2 timer since CTS is received
 		j1939->tp_tx_busy = 1;
-
-		//Check T3 timeout - time between sending RTS and receiving CTS - YakirZ
-		uint32_t now = HAL_GetTick();
-		 if (j1939->tp_tx_busy && (now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS)
-			    {
-			        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-			        j1939->tp_tx_busy = 0;
-			    }
-
-
-
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
 		//HAL_Delay(1260); // debug -  test T2 C#
@@ -75,19 +68,23 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	    memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
 	    j1939->tp_rx_busy = 0;
 	    j1939->tp_tx_busy = 0;
+	    j1939->timeoutType = 0;
+	    j1939->isTimerCounting = 0;
 	    break;
 	case CONTROL_BYTE_TP_CM_EndOfMsgACK:
-		 now = HAL_GetTick();
-				 if ((now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS) // T3 timeout for EOM
-					    {
-					        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-					        j1939->tp_tx_busy = 0;
-					    }
+//		 now = HAL_GetTick();
+//				 if ((now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS) // T3 timeout for EOM
+//					    {
+//					        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
+//					        j1939->tp_tx_busy = 0;
+//					    }
 
 
 		j1939->from_other_ecu_tp_cm.total_number_of_bytes_received = (data[2] << 8) | data[1];
 		j1939->from_other_ecu_tp_cm.total_number_of_packages_received = data[3];
 		j1939->tp_rx_busy = 0;
+		j1939->timeoutType = 0;
+		j1939->isTimerCounting = 0;
 
 	}
 }
@@ -111,6 +108,9 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		data[2] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted >> 8;
 		data[3] = j1939->this_ecu_tp_cm.number_of_packages_being_transmitted;
 		data[4] = 0x10; 															/* Max number of packages to be transmitted at once */
+		j1939->isTimerCounting = 1;
+		j1939->timer = J1939_T3_mSEC;
+		j1939->timeoutType = 3;
 		break;
 
 	case CONTROL_BYTE_TP_CM_CTS:

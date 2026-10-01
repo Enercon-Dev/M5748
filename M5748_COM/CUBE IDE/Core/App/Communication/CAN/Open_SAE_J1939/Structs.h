@@ -284,7 +284,9 @@ typedef struct {
 	uint32_t tp_rx_t2_timer;    /* T2: waiting for next CTS after we sent DTs YZ */
 	uint32_t tp_tx_t3_timer;    /* T3: waiting for another CTS or EOM_ACK after final DT YZ */
 	uint32_t tp_tx_t4_timer;    /* T4: waiting for EOM_ACK after final DT YZ */
-
+	uint32_t timer;
+	uint8_t isTimerCounting;
+	uint8_t timeoutType;
 	/* Temporary store the valve information from the reading process - ISO 11783-7 */
 	struct Auxiliary_valve_estimated_flow from_other_ecu_auxiliary_valve_estimated_flow[16];
 	struct Auxiliary_valve_measured_position from_other_ecu_auxiliary_valve_measured_position[16];

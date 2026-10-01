@@ -116,7 +116,16 @@ static void GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
+void DWT_Init(void) {
+    // Core Debug Control and Status Register (DEMCR) -> Enable Trace
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 
+    // DWT Control Register (CTRL) -> Reset cycle counter
+    DWT->CYCCNT = 0;
+
+    // DWT Control Register (CTRL) -> Enable cycle counter
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
 /* USER CODE END 0 */
 
 /**
@@ -127,7 +136,11 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+    DWT_Init();
+    uint32_t start_cycles = 0;
+        uint32_t end_cycles = 0;
+        uint32_t total_cycles = 0;
+        float loop_time_us = 0.0f;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -175,8 +188,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
       CAN_Poll_Task();
-      SAE_J1939_TP_Timeout_Task(&j1939);
 
     if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE))
     {
@@ -184,6 +197,7 @@ int main(void)
      // TP_LED1(b100mS_gate);
 
       updateTimingVar();
+      SAE_J1939_TP_Timeout_Task(&j1939); // Timeout Handler
       SendPeriodicProp_B();
       readDigitalInputs();
       readAnalogInputs();
@@ -199,6 +213,7 @@ int main(void)
 
       Telemetry_Handler();
       writeDigitalOutputs();
+
     }
 
 

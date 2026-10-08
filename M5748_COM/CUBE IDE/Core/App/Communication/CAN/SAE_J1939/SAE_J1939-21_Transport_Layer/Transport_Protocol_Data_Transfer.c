@@ -47,23 +47,13 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	    dataValid = 1;
 		j1939->timer = J1939_T1_mSEC;
 		j1939->timeoutType = 1;
-
 	    for (i = 1; i < 8; i++)
 	        j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i];
 	    if (j1939->this_ecu_tp_dt.remaining_packages > 0)
 	        j1939->this_ecu_tp_dt.remaining_packages--;
 	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
 	    j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
-
-	    //check timeout T1 between packets
-//	    	 if (  packetsDeltaTime > J1939_TP_T1_MS)
-//	    		    {
-//	    		        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address,j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message, 3); /* 3 = timeout */
-//	    		        memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-//	    		        memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-//	    		        j1939->tp_rx_busy = 0;
-//	    		    }
-
+	    //HAL_Delay(600); //test T4 c#
 
 	}
 	else {
@@ -178,7 +168,8 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 
 
 	switch (j1939->from_other_ecu_tp_cm.control_byte) {
-//	case CONTROL_BYTE_TP_CM_BAM:
+	case CONTROL_BYTE_TP_CM_BAM:
+		return;
 //		for (i = 1; i <= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted; i++) {
 //			package[0] = i; 																	/* Number of package */
 //			for (j = 0; j < 7; j++) {
@@ -240,9 +231,13 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	        HAL_Delay(2);
 	    }
 	    if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
-	        j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
+	    {
+	    	j1939->timer = J1939_T3_mSEC;
+	    	j1939->isTimerCounting = 3;
+	       // j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
+	    }
 	    else
-	        j1939->tp_rx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
+	       // j1939->tp_rx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
   	         j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
 	    		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
 	    		break;

@@ -18,6 +18,7 @@
 #define J1939_T1_mSEC (3 * T_250mSEC) // T1 = 750msec
 #define J1939_T2_mSEC (5 * T_250mSEC) // T2 = 1250msec
 #define J1939_T3_mSEC (5 * T_250mSEC) // T3 = 1250msec
+#define J1939_T4_mSEC ((4 * T_250mSEC) + 50) // T4 = 1050msec
 #define T_1SEC    (10 * T_100mSEC)
 #define T_1MIN    (60 * T_1SEC)
 #define T_10MIN   (10 * T_1MIN)

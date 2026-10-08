@@ -292,7 +292,7 @@ namespace M5748SwUpdater
                     if (recivedFrame == null)
                     {
                         //nothing recived - try sending the command again
-                        System.Threading.Thread.Sleep(1000);
+                        System.Threading.Thread.Sleep(2000);
                     }
                     else
                     {

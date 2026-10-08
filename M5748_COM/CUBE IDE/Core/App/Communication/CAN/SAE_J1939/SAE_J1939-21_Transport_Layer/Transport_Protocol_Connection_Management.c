@@ -7,6 +7,7 @@
 
 #include "Transport_Layer.h"
 #include "Timing.h"
+static uint8_t sourceAddress = 0;
 /*
  * Store information about sequence data packages from other ECU who are going to send to this ECU
  * PGN: 0x00EC00 (60416)
@@ -18,20 +19,34 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	/* PGN */
 	j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
 
+	if(sourceAddress !=0 && sourceAddress != SA )
+		return;
+
 	/* Source address */
 	j1939->from_other_ecu_tp_cm.from_ecu_address = SA;
-
+	sourceAddress = SA;
 	/* Check the control byte */
 	switch (data[0]) {
 	case CONTROL_BYTE_TP_CM_RTS:
 		/* Set the RTS values */
+
+		j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
+		if(j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted > MAX_TP_DT )
+		{
+			SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 9); // 9 is "total message size > 1785 bytes" reason code
+		    j1939->isTimerCounting = 0;
+			j1939->tp_tx_busy = 0;
+		    j1939->tp_rx_busy = 0;
+			return;
+		}
+
 		if(j1939->tp_rx_busy) // in case another RTS request in received while reading packets
 			return;
 
 		j1939->tp_rx_busy = 1;
-		j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
 		j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
 		j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send = data[4]; // YZ
+
 
 		/* Send CTS */
 		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
@@ -47,12 +62,23 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->timeoutType = 2;
 		break;
 	case CONTROL_BYTE_TP_CM_CTS:
-		if(j1939->tp_tx_busy)
-			return;
-		j1939->isTimerCounting = 0; // stop t2 timer since CTS is received
-		j1939->tp_tx_busy = 1;
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
+
+		if(j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted == 0) // received cts hold
+		{
+			j1939->tp_tx_busy = 0;
+			j1939->timer = J1939_T4_mSEC;
+			j1939->timeoutType = 4;
+			break;
+		}
+
+		if(j1939->tp_tx_busy)
+			return;
+
+		j1939->isTimerCounting = 0; // stop t3 timer since CTS is received after sending RTS
+		j1939->tp_tx_busy = 1;
+
 		//HAL_Delay(1260); // debug -  test T2 C#
 		SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
 		break;
@@ -72,19 +98,12 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	    j1939->isTimerCounting = 0;
 	    break;
 	case CONTROL_BYTE_TP_CM_EndOfMsgACK:
-//		 now = HAL_GetTick();
-//				 if ((now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS) // T3 timeout for EOM
-//					    {
-//					        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-//					        j1939->tp_tx_busy = 0;
-//					    }
-
-
 		j1939->from_other_ecu_tp_cm.total_number_of_bytes_received = (data[2] << 8) | data[1];
 		j1939->from_other_ecu_tp_cm.total_number_of_packages_received = data[3];
 		j1939->tp_rx_busy = 0;
 		j1939->timeoutType = 0;
 		j1939->isTimerCounting = 0;
+
 
 	}
 }
@@ -103,7 +122,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 	/* Check the control byte */
 	switch (data[0]) {
 	case CONTROL_BYTE_TP_CM_RTS:
-		j1939->tp_tx_t3_timer = HAL_GetTick();
+		//j1939->tp_tx_t3_timer = HAL_GetTick();
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;
 		data[2] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted >> 8;
 		data[3] = j1939->this_ecu_tp_cm.number_of_packages_being_transmitted;
@@ -114,11 +133,23 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		break;
 
 	case CONTROL_BYTE_TP_CM_CTS:
-		j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
-		data[1] = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
-		data[2] = j1939->this_ecu_tp_cm.next_packet_number_transmitted;
-		data[3] = 0xFF; 															/* Reserved */
-		data[4] = 0xFF; 															/* Reserved */
+		if(j1939->sendCtsHold)
+		{
+			data[1] = 0;
+			data[2] = 0;
+			data[3] = 0xff;
+			data[4] = 0xff;
+			j1939->sendCtsHold = 0;
+			CAN_Send_Message(ID, data);
+			//HAL_Delay(1050); test T4 timeout C#
+		}
+			j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
+			data[1] = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
+			data[2] = j1939->this_ecu_tp_cm.next_packet_number_transmitted;
+			data[3] = 0xFF; 															/* Reserved */
+			data[4] = 0xFF;
+
+		/* Reserved */
 		break;
 	case CONTROL_BYTE_TP_CM_BAM:
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;

@@ -287,6 +287,7 @@ typedef struct {
 	uint32_t timer;
 	uint8_t isTimerCounting;
 	uint8_t timeoutType;
+	uint8_t sendCtsHold;
 	/* Temporary store the valve information from the reading process - ISO 11783-7 */
 	struct Auxiliary_valve_estimated_flow from_other_ecu_auxiliary_valve_estimated_flow[16];
 	struct Auxiliary_valve_measured_position from_other_ecu_auxiliary_valve_measured_position[16];

@@ -54,6 +54,7 @@ bool Open_SAE_J1939_Startup_ECU(J1939* j1939) {
 	//SAE_J1939_Send_Request_Address_Claimed(j1939, 0xFF);
 	j1939->timer = 0;
 	j1939->isTimerCounting = 0;
+	j1939->sendCtsHold = 0;
 	/* OK */
 	return true;
 }

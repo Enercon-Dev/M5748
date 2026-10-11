@@ -50,6 +50,7 @@ namespace M5748SwUpdater
         private readonly object txLock = new object();
 
         private bool tpTxActive = false;
+        private bool tpRxActive = false;
         private bool lastCtsWasHold = false;
         const uint TP_T_CTS_HOLD_MS = 500;
         const uint TP_T1_MS = 750;
@@ -62,9 +63,18 @@ namespace M5748SwUpdater
         private System.Timers.Timer ctsHoldTimer = new System.Timers.Timer { AutoReset = false };
         bool debug = true;
         bool sendCtsHold = false;
+        public J1939(byte sa, byte da)
+        {
+            SourceAddress = sa;
+            DestinationAddress = da;
+            ctsHoldTimer.Elapsed += (s, e) => ctsHoldTimerTimeout();
+            rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
+            rxT2Timer.Elapsed += (s, e) => OnT2Timeout();
+            rxT4Timer.Elapsed += (s, e) => OnT4Timeout();
+        }
+
         private void StartCtsHoldTimer()
         {
-            ctsHoldTimer.Elapsed += (s, e) => ctsHoldTimerTimeout();
             ctsHoldTimer.Stop();
             ctsHoldTimer.Interval = TP_T_CTS_HOLD_MS;
 
@@ -82,10 +92,9 @@ namespace M5748SwUpdater
 
         private void StartT1()
         {
-            rxT1Timer.Elapsed += (s, e) => OnT1Timeout();
             rxT1Timer.Stop();
             rxT1Timer.Interval = TP_T1_MS;
-           
+
             rxT1Timer.Start();
         }
 
@@ -99,24 +108,27 @@ namespace M5748SwUpdater
 
         private void StartT2()
         {
-            rxT2Timer.Elapsed += (s, e) => OnT2Timeout();
             rxT2Timer.Stop();
             rxT2Timer.Interval = TP_T2_MS;
 
             rxT2Timer.Start();
         }
+        private readonly object timerLock = new object();
 
         private void OnT2Timeout()
         {
-            Console.WriteLine("T2 timeout waiting for data after CTS -- sending Abort");
-            SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
-            RxState.ExpectedLength = 0;
-            RxState.Received = 0;
+            lock (timerLock)
+            {
+                if (RxState.ExpectedLength <= 0) return;   // guard against stale fire after we already completed
+                Console.WriteLine("T2 timeout waiting for data after CTS -- sending Abort");
+                SendAbort(RxState.Source, RxState.Pgn, 3);
+                RxState.ExpectedLength = 0;
+                RxState.Received = 0;
+            }
         }
 
         private void StartT4()
         {
-            rxT4Timer.Elapsed += (s, e) => OnT4Timeout();
             rxT4Timer.Stop();
             rxT4Timer.Interval = TP_T4_MS;
 
@@ -144,11 +156,7 @@ namespace M5748SwUpdater
         }
 
 
-        public J1939(byte sa, byte da)
-        {
-            SourceAddress = sa;
-            DestinationAddress = da;
-        }
+       
 
         private Queue<J1939Message> completedMessages = new Queue<J1939Message>();
         private AutoResetEvent messageEvent = new AutoResetEvent(false);
@@ -308,7 +316,7 @@ namespace M5748SwUpdater
                         //string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
                         //                lastCtsWasHold ? "T4 (hold)" : "T2 (CTS)";
                         Console.WriteLine("T3 (CTS) timeout, no link established");
-                       // SendAbort(DestinationAddress, pgn, 3 /* timeout */);
+                        // SendAbort(DestinationAddress, pgn, 3 /* timeout */);
                         lock (txLock) { tpTxActive = false; }
                         return;
                         throw new Exception("T3 (CTS) timeout ");
@@ -357,8 +365,8 @@ namespace M5748SwUpdater
                          i++)
                     {
                         byte seq = (byte)(sentPackets + 1);
-                        
-                       // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
+
+                        // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
 
                         SendTpDataPacket(
                             seq,
@@ -433,7 +441,7 @@ namespace M5748SwUpdater
 
             SendCan(TP_DT, dt);
             //Thread.Sleep((int)TP_T1_MS + 30); // DEBUG: test T1 timeout MCU
-            Console.WriteLine( $"TX DT seq={sequence}");
+            Console.WriteLine($"TX DT seq={sequence}");
         }
 
         public void SendBamMessage(uint pgn, byte[] data)
@@ -604,11 +612,11 @@ namespace M5748SwUpdater
 
                     //Console.WriteLine($"BAM: size={state.ExpectedLength}");
                 }
-      
 
                 else if (data[0] == 0x10) //RTS
                 {
-                    StartT2();
+                
+
                     RxState.ProtocolBAM = false;
                     RxState.ExpectedLength = data[1] | (data[2] << 8);
                     //data[3] - Total number of packets
@@ -625,7 +633,7 @@ namespace M5748SwUpdater
                 {
                     byte requestedPackets = data[1];
                     byte requestedSequence = data[2];
-                    
+
                     if (requestedSequence == 0)
                     {
                         lastCtsWasHold = true;   // add this field to the class
@@ -666,7 +674,7 @@ namespace M5748SwUpdater
                     {
                         Console.WriteLine(
                             $"CTS indicates missing packet -> retransmit seq={requestedSequence}");
-       
+
                         retransmission = false;
                         ctsEvent.Set();
 
@@ -734,7 +742,7 @@ namespace M5748SwUpdater
                         sendEOM_ACK();
                     RxState.ExpectedLength = 0;
 
-                    
+
 
                     lock (txLock)
                     {
@@ -767,14 +775,14 @@ namespace M5748SwUpdater
                     }
                 }
             }
-         
+
 
             else if (pgn == 0xFF)
             {
                 tpTxActive = false;
                 RxState = new TpRxState();
             }
-            
+
             else
             {
                 RaisePdu(new J1939Message
@@ -857,6 +865,7 @@ namespace M5748SwUpdater
 
             //Thread.Sleep(TP_T3_MS + 50); //DEBUG - test T3 timeout MCU
             SendCan(TP_CM, data);
+            StartT2();
             sendCtsHold = false;
         }
 
@@ -872,7 +881,7 @@ namespace M5748SwUpdater
             data[5] = (byte)(RxState.Pgn & 0xFF);
             data[6] = (byte)((RxState.Pgn >> 8) & 0xFF);
             data[7] = (byte)((RxState.Pgn >> 16) & 0xFF);
-           // Thread.Sleep(TP_T3_MS + 50); //DEBUG - Test T3 EOM MCU
+            // Thread.Sleep(TP_T3_MS + 50); //DEBUG - Test T3 EOM MCU
             SendCan(TP_CM, data);
         }
 

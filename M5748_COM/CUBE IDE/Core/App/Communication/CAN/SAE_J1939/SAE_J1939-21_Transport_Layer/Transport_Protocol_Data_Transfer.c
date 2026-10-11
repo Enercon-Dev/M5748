@@ -237,10 +237,12 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	       // j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
 	    }
 	    else
-	       // j1939->tp_rx_t2_timer = HAL_GetTick();  /* more windows to come -> wait for next CTS */
+	    {
   	         j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
-	    		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
-	    		break;
+	    	 SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
+	    	 break;
+
+	    }
 	}
   }
 	

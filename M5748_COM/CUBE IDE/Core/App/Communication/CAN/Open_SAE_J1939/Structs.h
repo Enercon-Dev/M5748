@@ -288,6 +288,10 @@ typedef struct {
 	uint8_t isTimerCounting;
 	uint8_t timeoutType;
 	uint8_t sendCtsHold;
+	uint8_t pendingResumeCts;   // set after sending hold, cleared after sending real CTS, YZ
+	uint8_t debug_hold_after_dt; // 0=disabled, else, value of 2 will cause a CTS hold of after DT 2 received, test t4 resume C# - YZ
+	uint8_t debug_hold_no_resume; //  1 = debug - test T4 timeout C# - YZ
+
 	/* Temporary store the valve information from the reading process - ISO 11783-7 */
 	struct Auxiliary_valve_estimated_flow from_other_ecu_auxiliary_valve_estimated_flow[16];
 	struct Auxiliary_valve_measured_position from_other_ecu_auxiliary_valve_measured_position[16];

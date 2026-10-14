@@ -167,8 +167,8 @@ int main(void)
 
    Open_SAE_J1939_Startup_ECU(&j1939);
 
-
-  /* USER CODE END 2 */
+j1939.debug_hold_no_resume = 0;
+j1939.debug_hold_after_dt = 0;
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

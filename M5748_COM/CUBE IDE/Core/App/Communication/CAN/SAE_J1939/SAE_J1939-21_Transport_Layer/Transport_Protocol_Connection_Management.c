@@ -29,7 +29,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	switch (data[0]) {
 	case CONTROL_BYTE_TP_CM_RTS:
 		/* Set the RTS values */
-
+		//j1939->sendCtsHold = 1; // debug - test T4 C#
 		j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
 		if(j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted > MAX_TP_DT )
 		{
@@ -61,6 +61,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->timer = J1939_T2_mSEC; // start counting T2
 		j1939->timeoutType = 2;
 		break;
+
 	case CONTROL_BYTE_TP_CM_CTS:
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
@@ -70,12 +71,11 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 			j1939->tp_tx_busy = 0;
 			j1939->timer = J1939_T4_mSEC;
 			j1939->timeoutType = 4;
+			j1939->isTimerCounting = 1;
 			break;
 		}
-
 		if(j1939->tp_tx_busy)
 			return;
-
 		j1939->isTimerCounting = 0; // stop t3 timer since CTS is received after sending RTS
 		j1939->tp_tx_busy = 1;
 
@@ -122,6 +122,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 	/* Check the control byte */
 	switch (data[0]) {
 	case CONTROL_BYTE_TP_CM_RTS:
+
 		//j1939->tp_tx_t3_timer = HAL_GetTick();
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;
 		data[2] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted >> 8;
@@ -130,26 +131,48 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		j1939->isTimerCounting = 1;
 		j1939->timer = J1939_T3_mSEC;
 		j1939->timeoutType = 3;
+		j1939->tp_tx_busy = 0;
 		break;
 
 	case CONTROL_BYTE_TP_CM_CTS:
-		if(j1939->sendCtsHold)
+		if(j1939->sendCtsHold || j1939->debug_hold_no_resume)
 		{
 			data[1] = 0;
 			data[2] = 0;
 			data[3] = 0xff;
 			data[4] = 0xff;
 			j1939->sendCtsHold = 0;
+			 if (j1939->debug_hold_no_resume)
+			 {
+			            // Deliberately do NOT set pendingResumeCts or start the resume timer.
+			            // The C# side's T4 should fire 1050ms later.
+			            j1939->isTimerCounting = 0;
+			            data[5] = j1939->this_ecu_tp_cm.PGN_of_the_packeted_message;
+			            data[6] = j1939->this_ecu_tp_cm.PGN_of_the_packeted_message >> 8;
+			            data[7] = j1939->this_ecu_tp_cm.PGN_of_the_packeted_message >> 16;
+			            CAN_Send_Message(ID, data);
+			            return STATUS_SEND_OK;   // skip the fall-through real CTS
+			       }
+
+
+
+		    j1939->pendingResumeCts = 1;
+		    j1939->timer = T_500mSEC;
+		    j1939->isTimerCounting = 1;
+		    j1939->timeoutType = 5;   // new type: "need to send resume CTS"
 			CAN_Send_Message(ID, data);
+			return;
 			//HAL_Delay(1050); test T4 timeout C#
 		}
+		else
+		{
 			j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
 			data[1] = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
 			data[2] = j1939->this_ecu_tp_cm.next_packet_number_transmitted;
 			data[3] = 0xFF; 															/* Reserved */
 			data[4] = 0xFF;
-
 		/* Reserved */
+		}
 		break;
 	case CONTROL_BYTE_TP_CM_BAM:
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;

@@ -48,11 +48,16 @@ namespace M5748SwUpdater
         private int currentTransmitTotalPackets;
         private int txNextSequence = 1;
         private readonly object txLock = new object();
-
         private bool tpTxActive = false;
         private bool tpRxActive = false;
         private bool lastCtsWasHold = false;
-        const uint TP_T_CTS_HOLD_MS = 500;
+        // Track the active TX session so T4 can abort it correctly
+        private uint currentTxPgn;
+        private byte currentTxDa;
+
+        // Resume-CTS state (receiver side, mirror of MCU's pendingResumeCts / timeoutType=5)
+        private bool pendingResumeCts = false;
+        const uint TP_T_CTS_HOLD_MS = 100;
         const uint TP_T1_MS = 750;
         const int TP_T2_MS = 1250;   // sender waits for next CTS
         const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
@@ -61,7 +66,9 @@ namespace M5748SwUpdater
         private System.Timers.Timer rxT2Timer = new System.Timers.Timer { AutoReset = false };
         private System.Timers.Timer rxT4Timer = new System.Timers.Timer { AutoReset = false };
         private System.Timers.Timer ctsHoldTimer = new System.Timers.Timer { AutoReset = false };
-        bool debug = true;
+        public bool DebugHoldNoResume = false;
+        public byte DebugHoldAfterDt = 2;   // 0 = disabled, else: send hold after receiving this DT seq#
+
         bool sendCtsHold = false;
         public J1939(byte sa, byte da)
         {
@@ -83,10 +90,16 @@ namespace M5748SwUpdater
 
         private void ctsHoldTimerTimeout()
         {
-            sendCtsHold = true;
-            Console.WriteLine("Sending a CTS HOLD");
-            sendCTS();
-            sendCTS();
+            lock (timerLock)
+            {
+                if (!pendingResumeCts) return;   // stale fire guard
+                Console.WriteLine("CtsHold timer fired - sending resume CTS");
+
+                pendingResumeCts = false;
+                sendCtsHold = false;       // make absolutely sure this is cleared so sendCTS() sends a REAL CTS
+                sendCTS();                 // sends a real CTS and arms T2 inside sendCTS() 
+                ctsHoldTimer.Stop();
+            }
         }
 
 
@@ -109,7 +122,7 @@ namespace M5748SwUpdater
         private void StartT2()
         {
             rxT2Timer.Stop();
-            rxT2Timer.Interval = TP_T2_MS;
+            rxT2Timer.Interval = TP_T2_MS ;
 
             rxT2Timer.Start();
         }
@@ -137,10 +150,14 @@ namespace M5748SwUpdater
 
         private void OnT4Timeout()
         {
-            Console.WriteLine("T4 timeout waiting for CTS after receiving HOLD -- sending Abort");
-            SendAbort(RxState.Source, RxState.Pgn, 3 /* timeout */);
-            RxState.ExpectedLength = 0;
-            RxState.Received = 0;
+            lock (timerLock)
+            {
+                if (!tpTxActive) return;   // stale fire guard
+                Console.WriteLine("T4 timeout - no resume CTS from receiver, aborting TX session");
+                SendAbort(currentTxDa, currentTxPgn, 3 /* timeout */);
+                tpTxActive = false;
+                ctsEvent.Set();            // unblock SendTpRtsCts so it can exit
+            }
         }
 
         private void SendAbort(byte da, uint pgn, byte reason)
@@ -274,6 +291,13 @@ namespace M5748SwUpdater
             int length = data.Length;
             int totalPackets = (length + 6) / 7;
 
+            //For T4
+            currentTransmitLength = length;
+            currentTransmitTotalPackets = totalPackets;
+            currentTxPgn = pgn;
+            currentTxDa = DestinationAddress;
+            tpTxActive = true;
+
             lock (txLock)
             {
                 currentTransmitData = data.ToArray();
@@ -302,15 +326,7 @@ namespace M5748SwUpdater
                      * 2. Request retransmission of an earlier packet
                      */
 
-                    // Determine which timeout is active right now
-                    //int timeoutMs;
-                    //if (sentPackets >= totalPackets)
-                    //    timeoutMs = TP_T3_MS;                    // waiting for EndOfMsgAck OR CTS
-                    //else if (lastCtsWasHold)
-                    //    timeoutMs = TP_T4_MS;                    // waiting after CTS(0,...)
-                    //else
-                    //    timeoutMs = TP_T2_MS;                    // waiting for next CTS
-
+              
                     if (!ctsEvent.WaitOne(TP_T3_MS))
                     {
                         //string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
@@ -360,9 +376,7 @@ namespace M5748SwUpdater
 
                     sentPackets = requestedSeq - 1;
 
-                    for (int i = 0;
-                         i < packetsToSend && sentPackets < totalPackets;
-                         i++)
+                    for (int i = 0; i < packetsToSend && sentPackets < totalPackets; i++)
                     {
                         byte seq = (byte)(sentPackets + 1);
 
@@ -375,7 +389,6 @@ namespace M5748SwUpdater
                         txNextSequence = seq + 1;
                         sentPackets++;
 
-                        StartCtsHoldTimer();
                         Thread.Sleep(2);
                     }
                 }
@@ -616,7 +629,6 @@ namespace M5748SwUpdater
                 else if (data[0] == 0x10) //RTS
                 {
                 
-
                     RxState.ProtocolBAM = false;
                     RxState.ExpectedLength = data[1] | (data[2] << 8);
                     //data[3] - Total number of packets
@@ -634,19 +646,17 @@ namespace M5748SwUpdater
                     byte requestedPackets = data[1];
                     byte requestedSequence = data[2];
 
-                    if (requestedSequence == 0)
+                    if (requestedPackets == 0)
                     {
-                        lastCtsWasHold = true;   // add this field to the class
-                        Console.Write("T4 timeout waiting for CTS after receiving HOLD -- sending Abort");
-                        //  ctsEvent.Set();          // still wake up the sender so it can re-wait with T4
+                        lastCtsWasHold = true;   
+                        Console.WriteLine("Received hold CTS - starting T4, pausing TX");
                         StartT4();
                         return;
                     }
-                    else
-                    {
+                   
                         rxT4Timer.Stop();
                         lastCtsWasHold = false;
-                    }
+                    
 
                     Console.WriteLine($"CTS: allow={requestedPackets} next={requestedSequence}");
 
@@ -693,7 +703,7 @@ namespace M5748SwUpdater
 
                 else if (data[0] == 0xff) //Connection abort
                 {
-                    Console.WriteLine("Connection abort received, reason code is " + data[2].ToString());
+                    Console.WriteLine("Connection abort received, reason code is " + data[1].ToString());
                     return;
                 }
             }
@@ -714,6 +724,19 @@ namespace M5748SwUpdater
 
                 }
 
+                // code for debugging T4 resume transmission on MCU side
+                byte receivedSeq = (byte)(RxState.Received / 7);   // 1-based seq that just arrived
+                if (DebugHoldAfterDt != 0 && receivedSeq == DebugHoldAfterDt)
+                {
+                    DebugHoldAfterDt--;   // one-shot
+                    Console.WriteLine($"[DEBUG] Triggering hold CTS after receiving DT seq {receivedSeq}");
+                    sendCtsHold = true;
+                    pendingResumeCts = true;
+                    sendCTS();   // sends CTS(packets=0), arms ctsHoldTimer -- existing path
+                    return;
+                }
+
+
                 if (DataOffset != RxState.Received)
                 {
                     //packet received out of order - drop it
@@ -721,7 +744,7 @@ namespace M5748SwUpdater
                     //if the protocol is BAM the conection should probably be dropd - not implemented yet
                     if (!RxState.ProtocolBAM)
                     {
-                        sendCTS();
+                        //sendCTS();
                         //StartT1();
                     }
                     return;
@@ -738,6 +761,8 @@ namespace M5748SwUpdater
                     //reception completed
                     byte[] result = new byte[RxState.ExpectedLength];
                     Array.Copy(RxState.Buffer, result, RxState.ExpectedLength);
+
+               
                     if (!RxState.ProtocolBAM)
                         sendEOM_ACK();
                     RxState.ExpectedLength = 0;
@@ -814,22 +839,7 @@ namespace M5748SwUpdater
             SendCan(0xEC00, rts);
         }
 
-        //private void sendCTS()
-        //{
-        //    byte[] data = new byte[8];
-
-        //    data[0] = 0x11; // CTS
-        //    data[1] = state.MaxPackets; //Number of packets that can be sent.This value shall be no larger than the value in byte 5 of the RTS message.
-        //    data[2] = (byte)(state.Received / 7 + 1); //Next packet number to be sent
-        //    data[3] = 0xFF;
-        //    data[4] = 0xFF;
-        //    data[5] = (byte)(state.Pgn & 0xFF);
-        //    data[6] = (byte)((state.Pgn >> 8) & 0xFF);
-        //    data[7] = (byte)((state.Pgn >> 16) & 0xFF);
-
-        //    state.RemainingPackets = state.MaxPackets;
-        //    SendCan(TP_CM, data);
-        //}
+       
         private void sendCTS()
         {
             byte[] data = new byte[8];
@@ -838,13 +848,18 @@ namespace M5748SwUpdater
                 (byte)(RxState.Received / 7 + 1);
 
             data[0] = 0x11;
-            if (sendCtsHold)
+            if (sendCtsHold || DebugHoldNoResume)
+            {
                 data[1] = 0; // for holding cts line
+            }
             /*
              * 
              */
             else
+            {
                 data[1] = RxState.MaxPackets; // Normal window.
+                StartT2();
+            }
 
             /*
              * First packet expected.
@@ -865,10 +880,23 @@ namespace M5748SwUpdater
 
             //Thread.Sleep(TP_T3_MS + 50); //DEBUG - test T3 timeout MCU
             SendCan(TP_CM, data);
-            StartT2();
+            if (sendCtsHold)
+            {
+                StartCtsHoldTimer();   // normal path - will send resume
+            }
+            else if (DebugHoldNoResume)
+            {
+                Console.WriteLine("[DEBUG] Sent hold CTS, deliberately NOT scheduling resume");
+                // No timer -- MCU's T4 should fire
+            }
+            else
+            {
+                StartT2();
+            }
             sendCtsHold = false;
         }
 
+        
         private void sendEOM_ACK()
         {
             byte[] data = new byte[8];
@@ -885,11 +913,7 @@ namespace M5748SwUpdater
             SendCan(TP_CM, data);
         }
 
-        private void sendRemainingData(byte NextSeq)
-        {
-            byte[] dt = new byte[8];
-            SendCan(0xEB00, dt);
-        }
+       
 
     }
 

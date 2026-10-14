@@ -132,6 +132,24 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 		j1939->timer--;
 		if(j1939->timer <= 0)
 		{
+			if (j1939->timeoutType == 5 && j1939->pendingResumeCts)
+			{
+			            // Send the follow-up real CTS now
+			            j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+			            j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted =j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
+			            j1939->this_ecu_tp_cm.next_packet_number_transmitted =j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+			            SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address);
+			            j1939->pendingResumeCts = 0;
+			            j1939->isTimerCounting = 0;
+			            j1939->timeoutType = 0;
+			            //  restart T2 since we sent a normal CTS and expect DTs again
+			            j1939->timer = J1939_T2_mSEC;
+			            j1939->isTimerCounting = 1;
+			            j1939->timeoutType = 2;
+			            return;
+			}
+
+
 //			if(j1939->timeoutType == 3) // cancel link without sending abort
 //			{
 //				memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
@@ -143,12 +161,16 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 //			    return;
 //			}
 
-
+		else
+		{
 		    SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3); // 3 is a timeout reason code
 		    j1939->isTimerCounting = 0;
 		    j1939->tp_tx_busy = 0;
 		    j1939->tp_rx_busy = 0;
 		}
+		    //memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+		   // memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	}
 
 		if(j1939->timeoutType == 1 && j1939->timer <= T_500mSEC) // during package reception, if time between packages reached is 500 ms, send cts hold
 		{

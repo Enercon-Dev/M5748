@@ -184,7 +184,7 @@ j1939.debug_hold_after_dt = 0;
 
       updateTimingVar();
       SAE_J1939_TP_Timeout_Task(&j1939); // Timeout Handler
-      SendPeriodicProp_B();
+     // SendPeriodicProp_B();
       readDigitalInputs();
       readAnalogInputs();
       debounceDigitalInputs();

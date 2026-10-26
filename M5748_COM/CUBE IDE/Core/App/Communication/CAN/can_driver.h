@@ -14,8 +14,7 @@ DataBuffer* CanGetFrame();
 DataBuffer* can_getTxBuffer();
 void CAN_SendProprietary_A();
 void CAN_Poll_Task(void);
-void CAN_Send_Proprietary_B();
-
+void CAN_SendProprietary_B(uint32_t PGN);
 
 
 

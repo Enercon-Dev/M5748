@@ -1,12 +1,12 @@
+
 #include "general.h"
 #include "IntUartDataLink.h"
 #include "Hardware/Hardware.h"
 #include "Open_SAE_J1939/Open_SAE_J1939.h"
 
-#define TP_TIMEOUT_MS 750
-
 extern CAN_HandleTypeDef hcan;
-extern struct TelRequest intTelRequest;
+extern  struct TelRequest intTelRequest ;
+
 
 CAN_TxHeaderTypeDef TxHeader;
 CAN_RxHeaderTypeDef RxHeader;
@@ -21,48 +21,48 @@ DataBuffer CanTxDataBuffer;
 volatile int newCanMsgReceived = 0;
 uint8_t count = 0;
 extern J1939 j1939;
-extern int TP_Prop_A_MsgReceived;
-static void Build_ALPS_Status1(uint8_t* data); // for debug only YZ
-static void Build_ALPS_Analog_Status(uint8_t* data); // for debug only YZ
+extern int TP_Prop_A_MsgReceived ;
 
 
-
-HAL_StatusTypeDef STM32_PLC_CAN_Transmit(uint8_t TxData[],
-		CAN_TxHeaderTypeDef *TxHeader) {
+HAL_StatusTypeDef STM32_PLC_CAN_Transmit(uint8_t TxData[], CAN_TxHeaderTypeDef *TxHeader) {
 	uint32_t TxMailbox;
 	return HAL_CAN_AddTxMessage(&hcan, TxHeader, TxData, &TxMailbox);
 }
 
-void STM32_PLC_CAN_Get_ID_Data(uint32_t *ID, uint8_t data[], uint8_t *dlc, bool *is_new_message)
+void STM32_PLC_CAN_Get_ID_Data(uint32_t* ID, uint8_t data[], uint8_t *dlc, bool* is_new_message)
 {
-    CAN_RxHeaderTypeDef RxHeader = { 0 };
-    uint8_t RxData[8] = { 0 };
-    HAL_StatusTypeDef status = HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData);
-    if (status != HAL_OK) {
-        *is_new_message = false;
-        return;
-    }
-    if (RxHeader.DLC == 0)
-    {
-        *is_new_message = false;
-        return;
+	CAN_RxHeaderTypeDef RxHeader = {0};
+	uint8_t RxData[8] = {0};
+	HAL_StatusTypeDef status = HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData);
+	if (status != HAL_OK) {
+		*is_new_message = false;
+		return;
     }
 
-    *ID  = (RxHeader.IDE == CAN_ID_STD) ? RxHeader.StdId : RxHeader.ExtId;
+	/* Check the length of the data */
+	if(RxHeader.DLC == 0){
+		*is_new_message = false;
+		return;
+	}
+
+	/* Read ID */
+	*ID  = (RxHeader.IDE == CAN_ID_STD) ? RxHeader.StdId : RxHeader.ExtId;
     *dlc = (uint8_t)RxHeader.DLC;
 
-    // Only copy the bytes that actually arrived; zero (or 0xFF per J1939) the rest for safety
-    memcpy(data, RxData, *dlc);
-    if (*dlc < 8) memset(data + *dlc, 0xFF, 8 - *dlc);
+	/* Read data */
+    // Only copy the bytes that actually arrived
+	memcpy(data, RxData, *dlc);
+    if (*dlc < 8) memset(data + *dlc, 0xFF, 8 - *dlc); //zero (or 0xFF per J1939) the rest for safety
 
-    *is_new_message = true;
+	/* Leave the function by saying that the message is new */
+	*is_new_message = true;
 }
 
 //void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 //{
 //	// can is set to loopback so we should trigger after sending byte
 //
-//	rxMsgType = Open_SAE_J1939_Listen_For_Messages(&j1939); // TODO: move to main loop
+//	rxMsgType = Open_SAE_J1939_Listen_For_Messages(&j1939);
 //	if(rxMsgType == RX_MSG_RESP_REQ_PROPRIETARY_A || TP_Prop_A_MsgReceived == 1 )
 //	{
 //		TP_Prop_A_MsgReceived = 0;
@@ -82,25 +82,8 @@ void STM32_PLC_CAN_Get_ID_Data(uint32_t *ID, uint8_t data[], uint8_t *dlc, bool 
 //	}
 //
 //}
-void SendPeriodicProp_B()
-{
-	if(b250mS_flg)
-		{
-		    b250mS_flg = 0;
-
-		    // ALPS STATUS1
-		    Build_ALPS_Status1(j1939.this_proprietary.proprietary_B[0].data);
-
-		    CAN_Send_Proprietary_B(&j1939, PGN_ALPS_STATUS1);
 
 
-		    // ALPS ANALOG STATUS
-		    Build_ALPS_Analog_Status(j1939.this_proprietary.proprietary_B[1].data);
-
-		    CAN_Send_Proprietary_B(&j1939, PGN_ALPS_ANALOG_STATUS);
-
-		}
-}
 void CAN_Poll_Task(void) {
 	rxMsgType = Open_SAE_J1939_Listen_For_Messages(&j1939);
 
@@ -122,146 +105,93 @@ void CAN_Poll_Task(void) {
 	}
 
 }
+
+
 void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 {
-	if(j1939->isTimerCounting)
+	if(j1939->tp_rx_busy == 1 || j1939->tp_tx_busy == 1)
 	{
-		j1939->timer--;
+		if (j1939->timer > J1939_MAX_TIMEOUT)
+			j1939->timer = J1939_MAX_TIMEOUT;
+		else if (j1939->timer > 0)
+			j1939->timer--;
+    
 		if(j1939->timer <= 0)
 		{
 			if (j1939->timeoutType == 5 && j1939->pendingResumeCts)
 			{
-			            // Send the follow-up real CTS now
-			            j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-			            j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted =j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
-			            j1939->this_ecu_tp_cm.next_packet_number_transmitted =j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-			            SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address);
-			            j1939->pendingResumeCts = 0;
-			            j1939->isTimerCounting = 0;
-			            j1939->timeoutType = 0;
-			            //  restart T2 since we sent a normal CTS and expect DTs again
-			            j1939->timer = J1939_T2_mSEC;
-			            j1939->isTimerCounting = 1;
-			            j1939->timeoutType = 2;
-			            return;
+        // Send the follow-up real CTS now
+			  j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+			  j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted =j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
+			  j1939->this_ecu_tp_cm.next_packet_number_transmitted =j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+			  SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address);
+			  j1939->pendingResumeCts = 0;
+			  j1939->isTimerCounting = 0;
+			  j1939->timeoutType = 0;
+			  //  restart T2 since we sent a normal CTS and expect DTs again
+			  j1939->timer = J1939_T2_mSEC;
+			  j1939->isTimerCounting = 1;
+			  j1939->timeoutType = 2;
+			  return;
 			}
-
-
-//			if(j1939->timeoutType == 3) // cancel link without sending abort
-//			{
-//				memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-//			    memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-//			    j1939->tp_rx_busy = 0;
-//			    j1939->tp_tx_busy = 0;
-//			    j1939->timeoutType = 0;
-//			    j1939->isTimerCounting = 0;
-//			    return;
-//			}
-
-		else
-		{
+		  else
+		  {
 		    SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3); // 3 is a timeout reason code
-
-		}
-		    //memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+        j1939->tp_rx_busy = 0;
+		    j1939->tp_tx_busy = 0;
+		    j1939->timeoutType = 0;
+		    j1939->isTimerCounting = 0;
+		  }
+		   //memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
 		   // memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-	}
-
-		if(j1939->timeoutType == 1 && j1939->timer <= T_500mSEC) // during package reception, if time between packages reached is 500 ms, send cts hold
-		{
-			j1939->sendCtsHold =0;// 1;
-	        return;
-	     //   j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-	     //   SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
-		}
+	  }
 
 	}
-	else
-		return;
-//
-
-//
-////T2 is checked at Read_Transport_Protocol_Data_Transfer func
-//
-//	    if (j1939->tp_tx_busy && (now - j1939->tp_tx_t3_timer) > J1939_TP_T3_MS)
-//	    {
-//	        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-//	        j1939->tp_tx_busy = 0;
-//	    }
-
 
 }
-DataBuffer* CanGetFrame() {
-	if (!newCanMsgReceived)
-		return NULL;
 
-	CanRxDataBuffer.buffer = CanRxData;
-	CanRxDataBuffer.length = CanRxDataSize;
-	CanRxDataBuffer.offset = 0;
-	return &CanRxDataBuffer;
+
+DataBuffer* CanGetFrame()
+{
+  if (!newCanMsgReceived)
+    return NULL;
+  
+  CanRxDataBuffer.buffer = CanRxData;
+  CanRxDataBuffer.length = CanRxDataSize;
+  CanRxDataBuffer.offset = 0;
+  return &CanRxDataBuffer;
 }
 
-DataBuffer* can_getTxBuffer() {
-	//if (uart_bIsTransmitting(ch)) //TODO: check if buffer busy --> buffer is never busy YZ
-	//  return NULL;
 
-	CanTxDataBuffer.buffer = j1939.this_proprietary.proprietary_A.data;
-	CanTxDataBuffer.length = MAX_PROPRIETARY_A;
-	CanTxDataBuffer.offset = 0;
+DataBuffer* can_getTxBuffer()
+{
+  //if (uart_bIsTransmitting(ch)) //TODO: check if buffer busy --> buffer is never busy YZ
+  //  return NULL;
+  
+  if (j1939.tp_tx_busy || j1939.tp_rx_busy)
+    return NULL; //The transport layer is busy so if the message is longer then 8 bytes it wont be sent. To prevent this we will not fill the proprietry A buffer as long as the transport layer is busy
+
+  CanTxDataBuffer.buffer = j1939.this_proprietary.proprietary_A.data;
+  CanTxDataBuffer.length = MAX_PROPRIETARY_A;
+  CanTxDataBuffer.offset = 0;
 
 	return &CanTxDataBuffer;
 }
 
-void CAN_SendProprietary_A() {
 
+void CAN_SendProprietary_A()
+{
 	j1939.this_proprietary.proprietary_A.total_bytes = CanTxDataBuffer.offset;
 	//TODO: check if transport layer buffer is busy transmitting before sending new data
-	SAE_J1939_Response_Request_Proprietary_A(&j1939,j1939.from_other_ecu_proprietary.proprietary_A.from_ecu_address);
+	SAE_J1939_Response_Request_Proprietary_A(&j1939,
+			j1939.from_other_ecu_proprietary.proprietary_A.from_ecu_address);
 
 }
 
-void CAN_Send_Proprietary_B(J1939* j1939,   uint32_t PGN) // YZ
+
+void CAN_SendProprietary_B(uint32_t PGN)
 {
-    struct Proprietary_B * proprietary_B = Get_Proprietary_B_By_PGN( &j1939->this_proprietary,PGN);
-
-    if(proprietary_B == NULL)
-        return ;
-
-    uint32_t ID =(0x18UL << 24) |(PGN << 8) | j1939->information_this_ECU.this_ECU_address;
-
-     CAN_Send_Message(ID,proprietary_B->data);
-}
-
-static void Build_ALPS_Status1(uint8_t* data)
-{
-    memset(data, 0xFF, 8);
-
-    data[0] = 0;
-    data[3] = 0x00;
-    data[5] = 0xFF;
-    data[6] = 0xFF;
-    data[7] = 0xFF;
-}
-
-static void Build_ALPS_Analog_Status(uint8_t* data)
-{
-    memset(data, 0xFF, 8);
-
-    uint16_t vin     = 1;
-    uint16_t vright  = 2;
-    uint16_t vleft   = 3;
-    uint16_t vmbd    = 4;
-
-    data[0] = vin & 0xFF;
-    data[1] = vin >> 8;
-
-    data[2] = vright & 0xFF;
-    data[3] = vright >> 8;
-
-    data[4] = vleft & 0xFF;
-    data[5] = vleft >> 8;
-
-    data[6] = vmbd & 0xFF;
-    data[7] = vmbd >> 8;
+  bool is_supported;
+  SAE_J1939_Response_Request_Proprietary_B(&j1939, 0xFF, PGN, &is_supported);
 }
 

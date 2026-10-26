@@ -15,16 +15,19 @@
 #define T_100mSEC (10 * T_10mSEC)
 #define T_250mSEC (25 * T_10mSEC)
 #define T_500mSEC (5 * T_100mSEC)
-#define J1939_T1_mSEC (3 * T_250mSEC) // T1 = 750msec
-#define J1939_T2_mSEC (5 * T_250mSEC) // T2 = 1250msec
-#define J1939_T3_mSEC (5 * T_250mSEC) // T3 = 1250msec
-#define J1939_T4_mSEC ((4 * T_250mSEC) + 50) // T4 = 1050msec
 #define T_1SEC    (10 * T_100mSEC)
 #define T_1MIN    (60 * T_1SEC)
 #define T_10MIN   (10 * T_1MIN)
 #define T_1HOUR   (60 * T_10MIN)
 
-extern int b50mS_flg, b100mS_flg,b250mS_flg, b500mS_flg,  b1S_flg,  b1Min_flg;
+//for CAN bus time out
+#define J1939_T1_mSEC (3 * T_250mSEC) // T1 = 750msec
+#define J1939_T2_mSEC (5 * T_250mSEC) // T2 = 1250msec
+#define J1939_T3_mSEC (5 * T_250mSEC) // T3 = 1250msec
+#define J1939_T4_mSEC ((4 * T_250mSEC) + 50) // T4 = 1050msec
+#define J1939_MAX_TIMEOUT (2 * T_1SEC)
+
+extern int b50mS_flg, b100mS_flg,  b500mS_flg,  b1S_flg,  b1Min_flg;
 extern int b100mS_gate, b500mS_gate, b1S_gate;
 extern int bSlowBlinkin_gate;
 

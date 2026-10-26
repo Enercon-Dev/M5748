@@ -7,6 +7,7 @@
 
 #include "Transport_Layer.h"
 #include "Timing.h"
+#include "stm32f1xx_hal.h"
 
 /* Layers */
 #include "../SAE_J1939-81_Network_Management_Layer/Network_Management_Layer.h"
@@ -21,55 +22,25 @@ int TP_Prop_A_MsgReceived = 0;
  */
 void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[])
 {
-	/* Save the sequence data */
 	if(j1939->from_other_ecu_tp_cm.from_ecu_address != SA ) // Checking current package SA with original RTS SA
 			return;
 
 	uint8_t dataValid = 0;
-	j1939->from_other_ecu_tp_dt.from_ecu_address = SA; // check if source address is valid, else drop the package and return
+	/* Save the sequence data */
+	j1939->from_other_ecu_tp_dt.from_ecu_address = SA;
 	uint8_t i, j, index = data[0] - 1;
 	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
-
-	//check timeout T2 at first packet since CTS:
-	if(j1939->from_other_ecu_tp_dt.sequence_number == 1 )
-	{
-		//j1939->timer = J1939_T1_mSEC;
-		//j1939->timeoutType = 1;
-//		j1939->tp_rx_t1_timer = HAL_GetTick();
-//		uint32_t now = HAL_GetTick();
-//		if (j1939->tp_rx_busy && (now - j1939->tp_rx_t2_timer) > J1939_TP_T2_MS)
-//			    {
-//			        SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3);
-//			        j1939->tp_rx_busy = 0;
-//			    }
-	}
-
 
 	if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1)
 	{
 	    dataValid = 1;
 		j1939->timer = J1939_T1_mSEC;
 		j1939->timeoutType = 1;
-	    for (i = 1; i < 8; i++)
-	        j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i];
-	    if (j1939->this_ecu_tp_dt.remaining_packages > 0)
+		for (i = 1; i < 8; i++)
+			j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i];
+		if (j1939->this_ecu_tp_dt.remaining_packages > 0)
 	        j1939->this_ecu_tp_dt.remaining_packages--;
 	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
-	  //  j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
-	    //HAL_Delay(600); //test T4 c#
-
-	    //code to test T4 resume for C# interface - YZ
-	    if(j1939->debug_hold_after_dt !=0 && j1939->from_other_ecu_tp_dt.sequence_number == j1939->debug_hold_after_dt )
-	    {
-	    	// Trigger a hold CTS on next CTS send
-	    	    j1939->debug_hold_after_dt = 0;   // one-shot
-	    	    j1939->sendCtsHold = 1;
-	    	    j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-	    	    j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-	    	    SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
-	    	    return;
-	    }
-
 	}
 	else {
 	    /* Out-of-order: request the missing packet via a targeted CTS */
@@ -77,10 +48,10 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	        j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->this_ecu_tp_dt.remaining_packages;
 	        j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
 	        SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
-	        j1939->tp_rx_t1_timer = HAL_GetTick();
 
 	    return;   /* don't advance state on invalid packet */
 	}
+
 
 
 	/* Our message are complete - Build it and call it complete_data[total_message_size] */
@@ -97,6 +68,7 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 			}
 		}
 	}
+
 	// send back to M5748 application code
 	//TODO: add tp PGN switch case
 	// TP_OnFullMessage(complete_data, inserted_bytes); // J1939 Transport Protocol
@@ -111,41 +83,42 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	}
 	/* Check what type of function that message want this ECU to do */
 	switch (PGN) {
-	case PGN_COMMANDED_ADDRESS:
-		SAE_J1939_Read_Commanded_Address(j1939, complete_data);								/* Insert new name and new address to this ECU */
-		break;
-	case PGN_DM1:
-		SAE_J1939_Read_Response_Request_DM1(j1939, SA, complete_data, (total_message_size-2)/4); 	/* Number of DTCs = 4 bytes per DTC excluding 2 bytes for the lamp */
-		break;
-	case PGN_DM2:
-		SAE_J1939_Read_Response_Request_DM2(j1939, SA, complete_data, (total_message_size-2)/4); 	/* Number of DTCs = 4 bytes per DTC excluding 2 bytes for the lamp */
-		break;
-	case PGN_DM16:
-		SAE_J1939_Read_Binary_Data_Transfer_DM16(j1939, SA, complete_data);
-		break;
-	case PGN_SOFTWARE_IDENTIFICATION:
-		SAE_J1939_Read_Response_Request_Software_Identification(j1939, SA, complete_data);
-		break;
-	case PGN_ECU_IDENTIFICATION: { 
-		j1939->from_other_ecu_identifications.ecu_identification.length_of_each_field = total_message_size/4;
-		SAE_J1939_Read_Response_Request_ECU_Identification(j1939, SA, complete_data);
-		break;
-  }
-	case PGN_COMPONENT_IDENTIFICATION: {
-		j1939->from_other_ecu_identifications.component_identification.length_of_each_field = total_message_size/4;
-		SAE_J1939_Read_Response_Request_Component_Identification(j1939, SA, complete_data);
-		break;
-  }
+//	case PGN_COMMANDED_ADDRESS:
+//		SAE_J1939_Read_Commanded_Address(j1939, complete_data);								/* Insert new name and new address to this ECU */
+//		break;
+//	case PGN_DM1:
+//		SAE_J1939_Read_Response_Request_DM1(j1939, SA, complete_data, (total_message_size-2)/4); 	/* Number of DTCs = 4 bytes per DTC excluding 2 bytes for the lamp */
+//		break;
+//	case PGN_DM2:
+//		SAE_J1939_Read_Response_Request_DM2(j1939, SA, complete_data, (total_message_size-2)/4); 	/* Number of DTCs = 4 bytes per DTC excluding 2 bytes for the lamp */
+//		break;
+//	case PGN_DM16:
+//		SAE_J1939_Read_Binary_Data_Transfer_DM16(j1939, SA, complete_data);
+//		break;
+//	case PGN_SOFTWARE_IDENTIFICATION:
+//		SAE_J1939_Read_Response_Request_Software_Identification(j1939, SA, complete_data);
+//		break;
+//	case PGN_ECU_IDENTIFICATION: {
+//		j1939->from_other_ecu_identifications.ecu_identification.length_of_each_field = total_message_size/4;
+//		SAE_J1939_Read_Response_Request_ECU_Identification(j1939, SA, complete_data);
+//		break;
+//  }
+//	case PGN_COMPONENT_IDENTIFICATION: {
+//		j1939->from_other_ecu_identifications.component_identification.length_of_each_field = total_message_size/4;
+//		SAE_J1939_Read_Response_Request_Component_Identification(j1939, SA, complete_data);
+//		break;
+//  }
 	case PGN_PROPRIETARY_A:
 		SAE_J1939_Read_Response_Request_Proprietary_A(j1939, SA, complete_data, total_message_size); //by MK
 		TP_Prop_A_MsgReceived = 1;
 		break;
 	/* Add more here */
 	default:
-		if (((PGN >= PGN_PROPRIETARY_B_START) && (PGN <= PGN_PROPRIETARY_B_END)) || 
-		    ((PGN >= PGN_PROPRIETARY_B2_START) && (PGN <= PGN_PROPRIETARY_B2_END))) {
-			SAE_J1939_Read_Response_Request_Proprietary_B(j1939, SA, PGN, complete_data);
-			}
+          //by MK: currently we do not receive any ROPRIETARY_B messages. should this change, then this code may by uncommented
+//		if (((PGN >= PGN_PROPRIETARY_B_START) && (PGN <= PGN_PROPRIETARY_B_END)) ||
+//		    ((PGN >= PGN_PROPRIETARY_B2_START) && (PGN <= PGN_PROPRIETARY_B2_END))) {
+//			SAE_J1939_Read_Response_Request_Proprietary_B(j1939, SA, PGN, complete_data);
+//			}
 		break;
 	}
 
@@ -156,16 +129,13 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 
 	else // if we didnt read all packets yet
 	{
-		//TODO: change this to send ACK once  a certain package size transmitted, and not after every single package
-
-	    			if(j1939->this_ecu_tp_dt.remaining_packages <= 0 )
-	    			{
-	    				j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-	    				j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
-	    				j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-	    				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-
-	    			}
+		if(j1939->this_ecu_tp_dt.remaining_packages <= 0 )
+	    {
+	    	j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+	    	j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
+	    	j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+	    	SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
+		}
 
 	}
 
@@ -184,7 +154,6 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 
 	switch (j1939->from_other_ecu_tp_cm.control_byte) {
 	case CONTROL_BYTE_TP_CM_BAM:
-		return;
 //		for (i = 1; i <= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted; i++) {
 //			package[0] = i; 																	/* Number of package */
 //			for (j = 0; j < 7; j++) {
@@ -203,7 +172,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 //				break;
 //			}
 //		}
-//		break;
+		break;
 	case CONTROL_BYTE_TP_CM_CTS:
 	{
 
@@ -240,20 +209,16 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 	        status = CAN_Send_Message(ID, package);
 	       // HAL_Delay(760); // Debug - Test T1 timeout C#
 
-//	        if(status != STATUS_SEND_OK)
-//	            return status;
+
 
 	        HAL_Delay(2);
 	    }
-	   // if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
-	    //{
+
 	    	j1939->timer = J1939_T3_mSEC;
 	    	j1939->isTimerCounting = 1;
 	    	j1939->timeoutType = 3;
-	    	j1939->tp_tx_busy = 0;
 	    	 break;
-	       // j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
-	    //}
+
 
 	}
   }

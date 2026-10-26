@@ -13,26 +13,26 @@
 
 /* This function should be called all the time, or be placed inside an interrupt listener */
 ENUM_J1939_RX_MSG Open_SAE_J1939_Listen_For_Messages(J1939* j1939) {
-	 uint32_t ID = 0;
-	    uint8_t data[8] = {0};
-	    uint8_t dlc = 0;
-	    ENUM_J1939_RX_MSG rx_msg = RX_MSG_NONE;
-	    bool is_new_message = CAN_Read_Message(&ID, data, &dlc);
-
-	    if (is_new_message) {
-	        j1939->ID = ID;
-	        memcpy(j1939->data, data, dlc);          // copy only the real bytes
-	        if (dlc < 8)
+	uint32_t ID = 0;
+	uint8_t data[8] = {0};
+	uint8_t dlc = 0;
+	ENUM_J1939_RX_MSG rx_msg = RX_MSG_NONE;
+	bool is_new_message = CAN_Read_Message(&ID, data, &dlc);
+	if(is_new_message) {
+		/* Save latest */
+		j1939->ID = ID;
+		memcpy(j1939->data, data, dlc);  //copy only the real bytes
+		if (dlc < 8)
 	            memset(j1939->data + dlc, 0xFF, 8 - dlc);
-	        j1939->data_length = dlc;                 // store it for downstream consumers
-	        j1939->ID_and_data_is_updated = true;
+		j1939->data_length = dlc;                 // store it for downstream consumers
+		j1939->ID_and_data_is_updated = true;
 
-		uint8_t id0 = ID >> 24;
+		//uint8_t id0 = ID >> 24;
 		uint8_t id1 = ID >> 16; /* PDU Format (PF) */
 		uint8_t DA = ID >> 8; 	/* PDU Specific (PS) or destination address which is this ECU. if DA = 0xFF = broadcast to all ECU. Sometimes DA can be an ID number too */
 		uint8_t SA = ID; 	/* Source address of the ECU that we got the message from */
 
-		uint32_t PGN; // Proprietary_B
+		uint32_t PGN;
 
 		/* Properly calculate PGN based on PF (id1) */
 		if (id1 >= 240){
@@ -42,56 +42,58 @@ ENUM_J1939_RX_MSG Open_SAE_J1939_Listen_For_Messages(J1939* j1939) {
 		}
 
 		rx_msg = RX_MSG_NOT_SUPPORTED;
-
+                //The original code used to check id0 and id1. id0 contains priority bits which should not be checked since we
+                // shoudl receive messages with any priority. For this reason the code has been changed for checking PGN insted id0 and id1
+                
 		/* Read request from other ECU */
-		if (id0 == 0x18 && id1 == 0xEA && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
+		if (PGN == 0xEA00 && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
 			SAE_J1939_Read_Request(j1939, SA, data);
 			rx_msg = RX_MSG_REQ;
-		}else if (id0 == 0x18 && id1 == 0xD9 && DA == j1939->information_this_ECU.this_ECU_address){
-			SAE_J1939_Read_Request_DM14(j1939, SA, data);
-			rx_msg = RX_MSG_REQ_DM14;
+//		}else if (id0 == 0x18 && id1 == 0xD9 && DA == j1939->information_this_ECU.this_ECU_address){
+//			SAE_J1939_Read_Request_DM14(j1939, SA, data);
+//			rx_msg = RX_MSG_REQ_DM14;
 
 		/* Read status from other ECU */
-		}else if(id0 == 0x18 && id1 == 0xE8 && DA == j1939->information_this_ECU.this_ECU_address){
+		}else if(PGN == 0xE800 && DA == j1939->information_this_ECU.this_ECU_address){
 			SAE_J1939_Read_Acknowledgement(j1939, SA, data);
 			rx_msg = RX_MSG_ACK;
-		}else if (id0 == 0x18 && id1 == 0xD8 && DA == j1939->information_this_ECU.this_ECU_address){
-			SAE_J1939_Read_Response_DM15(j1939, SA, data);
-			rx_msg = RX_MSG_DM15;
-		}else if(id0 == 0x18 && id1 == 0xD7 && DA == j1939->information_this_ECU.this_ECU_address){
-			SAE_J1939_Read_Binary_Data_Transfer_DM16(j1939, SA, data);
-			rx_msg = RX_MSG_DM16;
+//		}else if (id0 == 0x18 && id1 == 0xD8 && DA == j1939->information_this_ECU.this_ECU_address){
+//			SAE_J1939_Read_Response_DM15(j1939, SA, data);
+//			rx_msg = RX_MSG_DM15;
+//		}else if(id0 == 0x18 && id1 == 0xD7 && DA == j1939->information_this_ECU.this_ECU_address){
+//			SAE_J1939_Read_Binary_Data_Transfer_DM16(j1939, SA, data);
+//			rx_msg = RX_MSG_DM16;
 
 		/* Read Transport Protocol information from other ECU */
-
-		}else if(id0 == 0x1C && id1 == 0xEC && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
+		}else if(PGN == 0xEC00 && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
 			SAE_J1939_Read_Transport_Protocol_Connection_Management(j1939, SA, data);
 			rx_msg = RX_MSG_TP_CONN_MANAGEMENT;
-		}else if (id0 == 0x1C && id1 == 0xEB && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
+		}else if (PGN == 0xEB00 && (DA == j1939->information_this_ECU.this_ECU_address || DA == 0xFF)){
 			SAE_J1939_Read_Transport_Protocol_Data_Transfer(j1939, SA, data);
 			rx_msg = RX_MSG_TP_CONN_DATA_TRANSFER;
 
 		/* Read response request from other ECU - This are response request. They are responses from other ECU about request from this ECU */
-		}else if (id0 == 0x14 && id1 == 0xEF && DA == j1939->information_this_ECU.this_ECU_address) {
-			SAE_J1939_Read_Response_Request_Proprietary_A(j1939, SA, data,  j1939->data_length); //by MK - change to actual datasize in the future -> from can RX func										/* Manufacturer specific data */
+		}else if (PGN == 0xEF00 && DA == j1939->information_this_ECU.this_ECU_address) {
+			SAE_J1939_Read_Response_Request_Proprietary_A(j1939, SA, data, j1939->data_length);                 /* Manufacturer specific data */
 			rx_msg = RX_MSG_RESP_REQ_PROPRIETARY_A;
-		}else if (((PGN >= PGN_PROPRIETARY_B_START) && (PGN <= PGN_PROPRIETARY_B_END)) || 
-				  ((PGN >= PGN_PROPRIETARY_B2_START) && (PGN <= PGN_PROPRIETARY_B2_END))) {
-			SAE_J1939_Read_Response_Request_Proprietary_B(j1939, SA, PGN, data);								/* Manufacturer specific data (B) */
-			rx_msg = RX_MSG_RESP_REQ_PROPRIETARY_B;
-		}else if (id0 == 0x18 && id1 == 0xEE && DA == 0xFF && SA != 0xFE){
-			SAE_J1939_Read_Response_Request_Address_Claimed(j1939, SA, data);									/* This is a broadcast response request */
-			rx_msg = RX_MSG_RESP_REQ_ADDR_CLAIMED;
-		}else if (id0 == 0x18 && id1 == 0xEE && DA == 0xFF && SA == 0xFE) {
-			SAE_J1939_Read_Address_Not_Claimed(j1939, SA, data);												/* This is error */
-			rx_msg = RX_MSG_ADDR_NOT_CLAIMED;
+		//by MK: currently we do not receive any ROPRIETARY_B messages. should this change, then this code may by uncommented
+//                }else if (((PGN >= PGN_PROPRIETARY_B_START) && (PGN <= PGN_PROPRIETARY_B_END)) || 
+//				  ((PGN >= PGN_PROPRIETARY_B2_START) && (PGN <= PGN_PROPRIETARY_B2_END))) {
+//			SAE_J1939_Read_Response_Request_Proprietary_B(j1939, SA, PGN, data);								/* Manufacturer specific data (B) */
+//			rx_msg = RX_MSG_RESP_REQ_PROPRIETARY_B;
+//		}else if (id0 == 0x18 && id1 == 0xEE && DA == 0xFF && SA != 0xFE){
+//			SAE_J1939_Read_Response_Request_Address_Claimed(j1939, SA, data);									/* This is a broadcast response request */
+//			rx_msg = RX_MSG_RESP_REQ_ADDR_CLAIMED;
+//		}else if (id0 == 0x18 && id1 == 0xEE && DA == 0xFF && SA == 0xFE) {
+//			SAE_J1939_Read_Address_Not_Claimed(j1939, SA, data);												/* This is error */
+//			rx_msg = RX_MSG_ADDR_NOT_CLAIMED;
 
-		}else if (id0 == 0x18 && id1 == 0xFE && DA == 0xCA){
-			SAE_J1939_Read_Response_Request_DM1(j1939, SA, data, 1); 											/* Assume that errors_dm1_active = 1 */
-			rx_msg = RX_MSG_RESP_REQ_DM1;
-		}else if (id0 == 0x18 && id1 == 0xFE && DA == 0xCB){
-			SAE_J1939_Read_Response_Request_DM2(j1939, SA, data, 1); 											/* Assume that errors_dm2_active = 1 */
-			rx_msg = RX_MSG_RESP_REQ_DM2;
+//		}else if (id0 == 0x18 && id1 == 0xFE && DA == 0xCA){
+//			SAE_J1939_Read_Response_Request_DM1(j1939, SA, data, 1); 											/* Assume that errors_dm1_active = 1 */
+//			rx_msg = RX_MSG_RESP_REQ_DM1;
+//		}else if (id0 == 0x18 && id1 == 0xFE && DA == 0xCB){
+//			SAE_J1939_Read_Response_Request_DM2(j1939, SA, data, 1); 											/* Assume that errors_dm2_active = 1 */
+//			rx_msg = RX_MSG_RESP_REQ_DM2;
 //		}else if (id0 == 0x18 && id1 == 0xFE && DA == 0xDA){
 //			SAE_J1939_Read_Response_Request_Software_Identification(j1939, SA, data);
 //			rx_msg = RX_MSG_RESP_REQ_SOFTWARE_IDENTIFICATION;

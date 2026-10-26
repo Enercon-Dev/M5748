@@ -35,12 +35,6 @@ bool Open_SAE_J1939_Startup_ECU(J1939* j1939) {
 		j1939->from_other_ecu_proprietary.proprietary_B[i].total_bytes = MAX_PROPRIETARY_B;
 	}
 
-	j1939->this_proprietary.proprietary_B[0].pgn = PGN_ALPS_STATUS1;
-	    j1939->this_proprietary.proprietary_B[0].total_bytes = 8;
-
-	    j1939->this_proprietary.proprietary_B[1].pgn = PGN_ALPS_ANALOG_STATUS;
-	    j1939->this_proprietary.proprietary_B[1].total_bytes = 8;
-
 	/* Clear other ECU addresses by setting the broadcast address to them */
 	memset(j1939->other_ECU_address, 0xFF, 0xFF);
 	j1939->number_of_cannot_claim_address = 0;
@@ -54,7 +48,8 @@ bool Open_SAE_J1939_Startup_ECU(J1939* j1939) {
 	//SAE_J1939_Send_Request_Address_Claimed(j1939, 0xFF);
 	j1939->timer = 0;
 	j1939->isTimerCounting = 0;
-	j1939->sendCtsHold = 0;
+  j1939->tp_rx_busy = 0;
+  j1939->tp_tx_busy = 0;
 	/* OK */
 	return true;
 }

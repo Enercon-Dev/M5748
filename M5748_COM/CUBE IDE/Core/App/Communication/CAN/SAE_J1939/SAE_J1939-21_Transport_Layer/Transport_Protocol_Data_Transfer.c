@@ -14,13 +14,17 @@
 #include "../SAE_J1939-71_Application_Layer/Application_Layer.h"
 extern void TP_OnFullMessage(uint8_t* data, uint16_t length);// J1939 Transport Protocol to M5748
 int TP_Prop_A_MsgReceived = 0;
-static uint32_t packetsDeltaTime = 0;
+
 /*
  * Store the sequence data packages from other ECU
  * PGN: 0x00EB00 (60160)
  */
-void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[]) {
+void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[])
+{
 	/* Save the sequence data */
+	if(j1939->from_other_ecu_tp_cm.from_ecu_address != SA ) // Checking current package SA with original RTS SA
+			return;
+
 	uint8_t dataValid = 0;
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA; // check if source address is valid, else drop the package and return
 	uint8_t i, j, index = data[0] - 1;
@@ -40,7 +44,6 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 //			    }
 	}
 
-	packetsDeltaTime =  HAL_GetTick() - j1939->tp_rx_t1_timer ;
 
 	if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1)
 	{
@@ -52,14 +55,14 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	    if (j1939->this_ecu_tp_dt.remaining_packages > 0)
 	        j1939->this_ecu_tp_dt.remaining_packages--;
 	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
-	    j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
+	  //  j1939->tp_rx_t1_timer = HAL_GetTick();   /* restart T1 on valid packet */
 	    //HAL_Delay(600); //test T4 c#
 
 	    //code to test T4 resume for C# interface - YZ
 	    if(j1939->debug_hold_after_dt !=0 && j1939->from_other_ecu_tp_dt.sequence_number == j1939->debug_hold_after_dt )
 	    {
 	    	// Trigger a hold CTS on next CTS send
-	    	    //j1939->debug_hold_after_dt = 0;   // one-shot
+	    	    j1939->debug_hold_after_dt = 0;   // one-shot
 	    	    j1939->sendCtsHold = 1;
 	    	    j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 	    	    j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
@@ -242,20 +245,16 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Data_Transfer(J1939 *j
 
 	        HAL_Delay(2);
 	    }
-	    if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
-	    {
+	   // if (endSeq >= j1939->this_ecu_tp_cm.number_of_packages_being_transmitted)
+	    //{
 	    	j1939->timer = J1939_T3_mSEC;
 	    	j1939->isTimerCounting = 1;
 	    	j1939->timeoutType = 3;
-	       // j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
-	    }
-	    else
-	    {
-  	         j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
-	    	 SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, DA);
+	    	j1939->tp_tx_busy = 0;
 	    	 break;
+	       // j1939->tp_tx_t3_timer = HAL_GetTick();  /* final DT sent -> wait for EOM_ACK */
+	    //}
 
-	    }
 	}
   }
 	

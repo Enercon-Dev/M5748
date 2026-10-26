@@ -13,15 +13,19 @@
 
 /* This function should be called all the time, or be placed inside an interrupt listener */
 ENUM_J1939_RX_MSG Open_SAE_J1939_Listen_For_Messages(J1939* j1939) {
-	uint32_t ID = 0;
-	uint8_t data[8] = {0};
-	ENUM_J1939_RX_MSG rx_msg = RX_MSG_NONE;
-	bool is_new_message = CAN_Read_Message(&ID, data);
-	if(is_new_message) {
-		/* Save latest */
-		j1939->ID = ID;
-		memcpy(j1939->data, data, 8);
-		j1939->ID_and_data_is_updated = true;
+	 uint32_t ID = 0;
+	    uint8_t data[8] = {0};
+	    uint8_t dlc = 0;
+	    ENUM_J1939_RX_MSG rx_msg = RX_MSG_NONE;
+	    bool is_new_message = CAN_Read_Message(&ID, data, &dlc);
+
+	    if (is_new_message) {
+	        j1939->ID = ID;
+	        memcpy(j1939->data, data, dlc);          // copy only the real bytes
+	        if (dlc < 8)
+	            memset(j1939->data + dlc, 0xFF, 8 - dlc);
+	        j1939->data_length = dlc;                 // store it for downstream consumers
+	        j1939->ID_and_data_is_updated = true;
 
 		uint8_t id0 = ID >> 24;
 		uint8_t id1 = ID >> 16; /* PDU Format (PF) */
@@ -69,7 +73,7 @@ ENUM_J1939_RX_MSG Open_SAE_J1939_Listen_For_Messages(J1939* j1939) {
 
 		/* Read response request from other ECU - This are response request. They are responses from other ECU about request from this ECU */
 		}else if (id0 == 0x14 && id1 == 0xEF && DA == j1939->information_this_ECU.this_ECU_address) {
-			SAE_J1939_Read_Response_Request_Proprietary_A(j1939, SA, data, 8); //by MK - change to actual datasize in the future -> from can RX func										/* Manufacturer specific data */
+			SAE_J1939_Read_Response_Request_Proprietary_A(j1939, SA, data,  j1939->data_length); //by MK - change to actual datasize in the future -> from can RX func										/* Manufacturer specific data */
 			rx_msg = RX_MSG_RESP_REQ_PROPRIETARY_A;
 		}else if (((PGN >= PGN_PROPRIETARY_B_START) && (PGN <= PGN_PROPRIETARY_B_END)) || 
 				  ((PGN >= PGN_PROPRIETARY_B2_START) && (PGN <= PGN_PROPRIETARY_B2_END))) {

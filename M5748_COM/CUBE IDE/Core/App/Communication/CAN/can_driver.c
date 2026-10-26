@@ -33,32 +33,29 @@ HAL_StatusTypeDef STM32_PLC_CAN_Transmit(uint8_t TxData[],
 	return HAL_CAN_AddTxMessage(&hcan, TxHeader, TxData, &TxMailbox);
 }
 
-void STM32_PLC_CAN_Get_ID_Data(uint32_t *ID, uint8_t data[],
-		bool *is_new_message) { // TODO: return reference for data size
-	CAN_RxHeaderTypeDef RxHeader = { 0 };
-	uint8_t RxData[8] = { 0 };
-	HAL_StatusTypeDef status = HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0,
-			&RxHeader, RxData);
-	if (status != HAL_OK)
-		return;
+void STM32_PLC_CAN_Get_ID_Data(uint32_t *ID, uint8_t data[], uint8_t *dlc, bool *is_new_message)
+{
+    CAN_RxHeaderTypeDef RxHeader = { 0 };
+    uint8_t RxData[8] = { 0 };
+    HAL_StatusTypeDef status = HAL_CAN_GetRxMessage(&hcan, CAN_RX_FIFO0, &RxHeader, RxData);
+    if (status != HAL_OK) {
+        *is_new_message = false;
+        return;
+    }
+    if (RxHeader.DLC == 0)
+    {
+        *is_new_message = false;
+        return;
+    }
 
-	/* Check the length of the data */
-	if (RxHeader.DLC == 0) {
-		*is_new_message = false;
-		return;
-	}
+    *ID  = (RxHeader.IDE == CAN_ID_STD) ? RxHeader.StdId : RxHeader.ExtId;
+    *dlc = (uint8_t)RxHeader.DLC;
 
-	/* Read ID */
-	if (RxHeader.IDE == CAN_ID_STD)
-		*ID = RxHeader.StdId;
-	else
-		*ID = RxHeader.ExtId;
+    // Only copy the bytes that actually arrived; zero (or 0xFF per J1939) the rest for safety
+    memcpy(data, RxData, *dlc);
+    if (*dlc < 8) memset(data + *dlc, 0xFF, 8 - *dlc);
 
-	/* Read data */
-	memcpy(data, RxData, 8);
-
-	/* Leave the function by saying that the message is new */
-	*is_new_message = true;
+    *is_new_message = true;
 }
 
 //void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
@@ -164,9 +161,7 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 		else
 		{
 		    SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 3); // 3 is a timeout reason code
-		    j1939->isTimerCounting = 0;
-		    j1939->tp_tx_busy = 0;
-		    j1939->tp_rx_busy = 0;
+
 		}
 		    //memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
 		   // memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
@@ -174,10 +169,10 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 
 		if(j1939->timeoutType == 1 && j1939->timer <= T_500mSEC) // during package reception, if time between packages reached is 500 ms, send cts hold
 		{
-			j1939->sendCtsHold = 1;
-	        j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-	        SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
+			j1939->sendCtsHold =0;// 1;
 	        return;
+	     //   j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+	     //   SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
 		}
 
 	}

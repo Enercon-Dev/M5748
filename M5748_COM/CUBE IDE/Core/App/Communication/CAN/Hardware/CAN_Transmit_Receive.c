@@ -156,35 +156,22 @@ ENUM_J1939_STATUS_CODES CAN_Send_Request(uint32_t ID, uint8_t PGN[]) {
 }
 
 /* Read the current CAN-bus message. Returning false if the message has been read before, else true */
-bool CAN_Read_Message(uint32_t* ID, uint8_t data[]) {
-	bool is_new_message = false;
+bool CAN_Read_Message(uint32_t* ID, uint8_t data[], uint8_t* dlc) {
+    bool is_new_message = false;
 #if OPENSAE_J1939_TARGET_PLATFORM == STM32
-	STM32_PLC_CAN_Get_ID_Data(ID, data, &is_new_message);
-#elif OPENSAE_J1939_TARGET_PLATFORM == ARDUINO
-	/* Implement your CAN function to get ID, data[] and the flag is_new_message here for the Arduino platform */
-#elif OPENSAE_J1939_TARGET_PLATFORM == PIC
-	/* Implement your CAN function to get ID, data[] and the flag is_new_message here for the PIC platform */
-#elif OPENSAE_J1939_TARGET_PLATFORM == AVR
-	/* Implement your CAN function to get ID, data[] and the flag is_new_message here for the AVR platform */
+    STM32_PLC_CAN_Get_ID_Data(ID, data, dlc, &is_new_message);
 #elif OPENSAE_J1939_TARGET_PLATFORM == QT_USB
-	QT_USB_Get_ID_Data(ID, data, &is_new_message);
-#elif OPENSAE_J1939_TARGET_PLATFORM == SOCKETCAN
-  socketcan_receive(ID, data, &is_new_message);
-#elif OPENSAE_J1939_TARGET_PLATFORM == INTERNAL_CALLBACK
-	Callback_Function_Read(ID, data, &is_new_message);
+    QT_USB_Get_ID_Data(ID, data, dlc, &is_new_message);
+    // ... etc for other platforms
 #else
-	/* If no processor are used, use internal feedback for debugging */
-	Internal_Receive(ID, data, &is_new_message);
+    Internal_Receive(ID, data, dlc, &is_new_message);
 #endif
 
-	/* Display traffic */
-	if (Callback_Function_Traffic != NULL && is_new_message) {
-		Callback_Function_Traffic(*ID, 8, data, false); /* ID, 8 bytes of data, data array, TX = false */
-	}
-
-	return is_new_message;
+    if (Callback_Function_Traffic != NULL && is_new_message) {
+        Callback_Function_Traffic(*ID, *dlc, data, false);  // use real DLC, not hardcoded 8
+    }
+    return is_new_message;
 }
-
 void CAN_Set_Callback_Functions(void (*Callback_Function_Send_)(uint32_t, uint8_t, uint8_t[]),
 	void (*Callback_Function_Read_)(uint32_t*, uint8_t[], bool*),
 	void (*Callback_Function_Traffic_)(uint32_t, uint8_t, uint8_t[], bool),

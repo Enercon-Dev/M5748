@@ -55,6 +55,8 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Response_Request_Proprietary_B(J1939* j1939, u
 		return CAN_Send_Message(ID, data);
 	}
 	else {
+		if(j1939->tp_rx_busy || j1939->tp_tx_busy)
+			return STATUS_SEND_BUSY;
 		/* Multiple messages - Load data */
 		j1939->this_ecu_tp_cm.total_message_size_being_transmitted = length_of_each_field;
 		memcpy(j1939->this_ecu_tp_dt.data, proprietary_B->data, length_of_each_field);

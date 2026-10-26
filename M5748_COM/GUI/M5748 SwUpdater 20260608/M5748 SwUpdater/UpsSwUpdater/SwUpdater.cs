@@ -234,7 +234,7 @@ namespace M5748SwUpdater
             Console.WriteLine("");
  
            
-            Console.Write("Writing ");
+            Console.WriteLine("Writing Flash.. ");
             int cursor = Console.CursorLeft;
             if (startAddress - FlashFirstAddress + MaxSize < file.Length)
             {

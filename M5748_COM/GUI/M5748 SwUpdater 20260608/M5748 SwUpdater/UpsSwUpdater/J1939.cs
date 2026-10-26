@@ -32,9 +32,14 @@ namespace M5748SwUpdater
 
     public class J1939
     {
+        const uint MAX_TP_DT = 1785;
         const uint TP_CM = 0xEC00; // Connection Management
         const uint TP_DT = 0xEB00; // Data Transfer
-
+        const uint TP_T_CTS_HOLD_MS = 100;
+        const uint TP_T1_MS = 750;
+        const int TP_T2_MS = 1250;   // sender waits for next CTS
+        const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
+        const int TP_T4_MS = 1050;   // sender waits after CTS(hold, packets=0)
         private byte SourceAddress;
         private byte DestinationAddress;
         private ushort Channel = 81;
@@ -57,17 +62,17 @@ namespace M5748SwUpdater
 
         // Resume-CTS state (receiver side, mirror of MCU's pendingResumeCts / timeoutType=5)
         private bool pendingResumeCts = false;
-        const uint TP_T_CTS_HOLD_MS = 100;
-        const uint TP_T1_MS = 750;
-        const int TP_T2_MS = 1250;   // sender waits for next CTS
-        const int TP_T3_MS = 1250;   // sender waits for EndOfMsgAck after final DT
-        const int TP_T4_MS = 1050;   // sender waits after CTS(hold, packets=0)
+        
+        
+        
+        
+        
         private System.Timers.Timer rxT1Timer = new System.Timers.Timer { AutoReset = false };
         private System.Timers.Timer rxT2Timer = new System.Timers.Timer { AutoReset = false };
         private System.Timers.Timer rxT4Timer = new System.Timers.Timer { AutoReset = false };
         private System.Timers.Timer ctsHoldTimer = new System.Timers.Timer { AutoReset = false };
         public bool DebugHoldNoResume = false;
-        public byte DebugHoldAfterDt = 2;   // 0 = disabled, else: send hold after receiving this DT seq#
+        public byte DebugHoldAfterDt = 0;   // 0 = disabled, else: send hold after receiving this DT seq#
 
         bool sendCtsHold = false;
         public J1939(byte sa, byte da)
@@ -595,7 +600,7 @@ namespace M5748SwUpdater
             byte pf = (byte)(id >> 16);
             byte ps = (byte)(id >> 8);
             byte sa = (byte)(id);
-
+            
             uint pgn;
             byte da = 0xFF;
 
@@ -628,9 +633,13 @@ namespace M5748SwUpdater
 
                 else if (data[0] == 0x10) //RTS
                 {
-                
+                    if (sa == 0xff) // if dest is BAM address, drop the message
+                        return;
+                    RxState.Source = sa;
                     RxState.ProtocolBAM = false;
                     RxState.ExpectedLength = data[1] | (data[2] << 8);
+                    if (RxState.ExpectedLength > MAX_TP_DT)
+                        return;
                     //data[3] - Total number of packets
                     RxState.MaxPackets = data[4]; //Maximum number of packets that can be sent in response to one CTS
                     int rxPgn = data[5] | (data[6] << 8) | (data[7] << 16); //PGN
@@ -643,6 +652,8 @@ namespace M5748SwUpdater
 
                 else if (data[0] == 0x11) // CTS
                 {
+                    if (RxState.Source != sa || sa == 0xFF)// Checking if this CTS source is from the same dest we set, OR from BAM address
+                        return;
                     byte requestedPackets = data[1];
                     byte requestedSequence = data[2];
 
@@ -658,7 +669,7 @@ namespace M5748SwUpdater
                         lastCtsWasHold = false;
                     
 
-                    Console.WriteLine($"CTS: allow={requestedPackets} next={requestedSequence}");
+                    Console.WriteLine($"Received CTS: allow={requestedPackets} next={requestedSequence}");
 
 
                     bool retransmission = false;
@@ -699,10 +710,18 @@ namespace M5748SwUpdater
                     }
                 }
                 else if (data[0] == 0x13) // EndOfMessage
+                {
+                    Console.WriteLine("End Of Message Received");
+                    if (RxState.Source != sa || sa == 0xFF)// Checking if this EOM source is from the same dest we set, OR from BAM address
+                        return;
                     eomEvent.Set();
+                    
+                }
 
                 else if (data[0] == 0xff) //Connection abort
                 {
+                    if (RxState.Source != sa || sa == 0xFF)// Checking if this abort source is from the same dest we set, OR from BAM address
+                        return;
                     Console.WriteLine("Connection abort received, reason code is " + data[1].ToString());
                     return;
                 }
@@ -716,6 +735,7 @@ namespace M5748SwUpdater
                     return; //packet received not from the expected source
 
                 int SequenceNumber = data[0];
+                Console.WriteLine("Package received :" + SequenceNumber);
                 int DataOffset = (SequenceNumber - 1) * 7;
                 if (SequenceNumber == 1)
                 {
@@ -875,8 +895,8 @@ namespace M5748SwUpdater
 
             RxState.RemainingPackets = RxState.MaxPackets;
 
-            //Console.WriteLine(
-            //    $"TX CTS: allow={data[1]} next={data[2]}");
+            Console.WriteLine(
+                $"Sending CTS: allow={data[1]} next={data[2]}");
 
             //Thread.Sleep(TP_T3_MS + 50); //DEBUG - test T3 timeout MCU
             SendCan(TP_CM, data);
@@ -899,6 +919,7 @@ namespace M5748SwUpdater
         
         private void sendEOM_ACK()
         {
+            Console.WriteLine("EOM SENT");
             byte[] data = new byte[8];
 
             data[0] = 0x13; // End_of_Message Acknowledge

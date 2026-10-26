@@ -258,6 +258,7 @@ typedef struct {
 	/* Latest CAN message */
 	uint32_t ID;									/* This is the CAN bus ID */
 	uint8_t data[8];								/* This is the CAN bus data */
+	uint8_t data_length;
 	bool ID_and_data_is_updated;					/* This is a flag that going to be set to true for every time ID and data updates - Very useful in higher applications such as C++ */
 
 	/* Store addresses of ECU */

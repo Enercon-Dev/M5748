@@ -15,59 +15,95 @@
 #include "../SAE_J1939-71_Application_Layer/Application_Layer.h"
 extern void TP_OnFullMessage(uint8_t* data, uint16_t length);// J1939 Transport Protocol to M5748
 int TP_Prop_A_MsgReceived = 0;
-
+uint8_t missingPackageIndex[50] = {0};
+uint8_t missingPackageCounter = 0;
+uint8_t isPackageMissing = 0;
+uint8_t validPackageCounter = 1;
 /*
  * Store the sequence data packages from other ECU
  * PGN: 0x00EB00 (60160)
  */
 void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, uint8_t data[])
 {
+	// NOTE: currently BAM is not supported, if we will enable BAM - we need to verify DA == 0xFF and distinguish between BAM and RTS/CTS DATA messages
 	if(j1939->from_other_ecu_tp_cm.from_ecu_address != SA ) // Checking current package SA with original RTS SA
 			return;
 
-	uint8_t dataValid = 0;
 	/* Save the sequence data */
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA;
 	uint8_t i, j, index = data[0] - 1;
 	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
-
-	if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1)
+	if(validPackageCounter != j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
 	{
-	    dataValid = 1;
-		j1939->timer = J1939_T1_mSEC;
-		j1939->timeoutType = 1;
-		for (i = 1; i < 8; i++)
-			j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i];
-		if (j1939->this_ecu_tp_dt.remaining_packages > 0)
-	        j1939->this_ecu_tp_dt.remaining_packages--;
-	    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
-	}
-	else {
-	    /* Out-of-order: request the missing packet via a targeted CTS */
-	        j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
-	        j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->this_ecu_tp_dt.remaining_packages;
-	        j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-	        SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
+		if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1) // valid package, save it
+			{
+				validPackageCounter++;
 
-	    return;   /* don't advance state on invalid packet */
+			}
+			else
+			{
+			    /* Out-of-order: save the missing packet index, continue receiving incoming packages, and request retransmit at the end of reception window */
+				missingPackageIndex[missingPackageCounter] = j1939->from_other_ecu_tp_dt.sequence_number - 1;
+				missingPackageCounter++;
+				j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_dt.sequence_number - 1; // point to the next expected package
+			    j1939->this_ecu_tp_dt.remaining_packages--;
+
+			}
+		for (i = 1; i < 8; i++)
+				j1939->from_other_ecu_tp_dt.data[index*7 + i-1] = data[i]; // save arrived package regardless if it is out of order
+
+		    j1939->from_other_ecu_tp_dt.packets_in_current_window++;
+			j1939->timer = J1939_T1_mSEC;
+			j1939->timeoutType = 1;
+		    j1939->this_ecu_tp_dt.remaining_packages--;
+
+		    if(validPackageCounter == j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
+		    	j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
+
 	}
+	else
+	{
+		validPackageCounter = 1;
+		j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
+	}
+
+
 
 
 
 	/* Our message are complete - Build it and call it complete_data[total_message_size] */
 	if(j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == j1939->from_other_ecu_tp_dt.packets_in_current_window)
 	{
-	uint32_t PGN = j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message;
-	uint16_t total_message_size = j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted;
-	uint8_t complete_data[MAX_TP_DT];
-	uint16_t inserted_bytes = 0;
-	for (i = 0; i < j1939->from_other_ecu_tp_dt.sequence_number; i++){
-		for (j = 0; j < 7; j++){
-			if (inserted_bytes < total_message_size){
-				complete_data[inserted_bytes++] = j1939->from_other_ecu_tp_dt.data[i*7 + j];
+		if(missingPackageCounter != 0)
+			{
+				missingPackageCounter--;
+				j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
+				j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted -  missingPackageIndex[missingPackageCounter] + 1  ;
+				j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted - 1 ;
+				validPackageCounter = missingPackageIndex[missingPackageCounter] - 1;
+				j1939->this_ecu_tp_cm.next_packet_number_transmitted = missingPackageIndex[missingPackageCounter];
+				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
+				j1939->from_other_ecu_tp_dt.packets_in_current_window =  missingPackageIndex[missingPackageCounter] - 1 ;
+				missingPackageIndex[missingPackageCounter] = 0;
+				j1939->timer = J1939_T2_mSEC;
+			    j1939->timeoutType = 2;
+				return;
+			}
+
+
+
+		uint32_t PGN = j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message;
+		uint16_t total_message_size = j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted;
+		uint8_t complete_data[MAX_TP_DT];
+		uint16_t inserted_bytes = 0;
+		for (i = 0; i < j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted; i++)
+		{
+			for (j = 0; j < 7; j++){
+				if (inserted_bytes < total_message_size){
+					complete_data[inserted_bytes++] = j1939->from_other_ecu_tp_dt.data[i*7 + j];
+				}
 			}
 		}
-	}
 
 	// send back to M5748 application code
 	//TODO: add tp PGN switch case
@@ -75,12 +111,18 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 
 
 	/* Send an end of message ACK back */
-	if(j1939->from_other_ecu_tp_cm.control_byte == CONTROL_BYTE_TP_CM_RTS){
+	//if(j1939->from_other_ecu_tp_cm.control_byte == CONTROL_BYTE_TP_CM_RTS) //
+	//{
+		// commented out the control byte check, since in a case when we get a BAM message while receiving data, it can overwrite the control byte
+		// and an EOM message will not we sent properly
+		// Should BAM be enabled we will need to add some variable to determine the transport mechanism (BAM Vs RTS/CTS)
 		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_EndOfMsgACK;
 		j1939->this_ecu_tp_cm.total_number_of_bytes_received = j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted;
-		j1939->this_ecu_tp_cm.total_number_of_packages_received = j1939->from_other_ecu_tp_dt.sequence_number;
+		j1939->this_ecu_tp_cm.total_number_of_packages_received = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;
+		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
+		validPackageCounter = 1;
 		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-	}
+	//}
 	/* Check what type of function that message want this ECU to do */
 	switch (PGN) {
 //	case PGN_COMMANDED_ADDRESS:
@@ -134,8 +176,12 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	    	j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 	    	j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
 	    	j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
+			j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
 	    	SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
+	    	j1939->timer = J1939_T2_mSEC;
+	    	j1939->timeoutType = 2;
 		}
+
 
 	}
 

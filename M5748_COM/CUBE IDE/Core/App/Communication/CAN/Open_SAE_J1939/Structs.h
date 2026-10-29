@@ -80,6 +80,8 @@ struct TP_DT {
 	uint8_t from_ecu_address;						/* From which ECU came this message */
 	uint8_t cts_window_size;
 	uint8_t packets_in_current_window;
+	uint8_t received_flags[256];   					//1 if seq i was received, 0 otherwise
+	uint8_t retransmit_cts_count;
 };
 
 /* PGN: 0x00EE00 - Storing the Address claimed from the reading process */

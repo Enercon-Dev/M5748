@@ -386,11 +386,9 @@ namespace M5748SwUpdater
                         byte seq = (byte)(sentPackets + 1);
 
                         // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
+                   
 
-                        SendTpDataPacket(
-                            seq,
-                            currentTransmitData,
-                            currentTransmitLength);
+                        SendTpDataPacket( seq,currentTransmitData, currentTransmitLength);
                         txNextSequence = seq + 1;
                         sentPackets++;
 
@@ -429,7 +427,8 @@ namespace M5748SwUpdater
                 }
             }
         }
-        public byte DebugSkipSeq = 0;        // 0 = disabled, else the seq to skip once
+
+        public byte DebugSkipSeq = 5;        // 0 = disabled, else the seq to skip once
         private bool debugSkipFlag = false;
         private void SendTpDataPacket(byte sequence, byte[] data, int length)
         {
@@ -689,25 +688,34 @@ namespace M5748SwUpdater
 
                         ctsPacketsToSend = requestedPackets;
                         ctsNextSeq = requestedSequence;
+
+                        if (retransmission)
+                        {
+                            Console.WriteLine(
+                                   $"CTS indicates missing packets -> retransmit from seq={requestedSequence}");
+                            for (int i = 0; i < requestedPackets; i++)
+                            {
+                                SendTpDataPacket(requestedSequence, currentTransmitData, currentTransmitLength);
+                                Console.WriteLine(
+                                   $"Retransmitted package={requestedSequence}");
+                                requestedSequence++;
+                                //ctsEvent.Set();
+                            }
+                            requestedSequence = 1;
+                            retransmission = false;
+                            txNextSequence = 1;
+                            return;
+                        }
+                        else
+                        {
+                            /*
+                             * Normal CTS.
+                             */
+                            ctsEvent.Set();
+                        }
                     }
 
-                    if (retransmission)
-                    {
-                        Console.WriteLine(
-                            $"CTS indicates missing packet -> retransmit seq={requestedSequence}");
-
-                        retransmission = false;
-                        ctsEvent.Set();
-
-                        return;
-                    }
-                    else
-                    {
-                        /*
-                         * Normal CTS.
-                         */
-                        ctsEvent.Set();
-                    }
+                
                 }
                 else if (data[0] == 0x13) // EndOfMessage
                 {
@@ -715,7 +723,9 @@ namespace M5748SwUpdater
                     if (RxState.Source != sa || sa == 0xFF)// Checking if this EOM source is from the same dest we set, OR from BAM address
                         return;
                     eomEvent.Set();
-                    
+                    txNextSequence = 1;
+
+
                 }
 
                 else if (data[0] == 0xff) //Connection abort

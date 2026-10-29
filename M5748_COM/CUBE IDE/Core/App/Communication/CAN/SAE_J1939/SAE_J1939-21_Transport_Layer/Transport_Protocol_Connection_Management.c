@@ -16,8 +16,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 	/* Read the control byte */
 	j1939->from_other_ecu_tp_cm.control_byte = data[0];
 
-	/* PGN */
-	j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
+
 
 	/* Check the control byte */
 	switch (data[0]) {
@@ -25,7 +24,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		/* Set the RTS values */
 		if(j1939->tp_rx_busy || j1939->tp_tx_busy) // in case another RTS request in received while another sesion is active
 		{
-		   SAE_J1939_Send_TP_Abort(j1939, j1939->from_other_ecu_tp_cm.from_ecu_address,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 1); // 1 is a reason code for an already managed session
+		   SAE_J1939_Send_TP_Abort(j1939, SA ,j1939->this_ecu_tp_cm.PGN_of_the_packeted_message, 1); // 1 is a reason code for an already managed session
 			return;
 		}
 		if(SA == 0xFF) // if source is brodcast, drop the message
@@ -44,15 +43,18 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		  j1939->tp_rx_busy = 0;
 			return;
 		}
-
+		memset(j1939->from_other_ecu_tp_dt.received_flags, 0,sizeof(j1939->from_other_ecu_tp_dt.received_flags));
+	    j1939->from_other_ecu_tp_dt.retransmit_cts_count = 0;
 		j1939->tp_rx_busy = 1;
 		j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
 		j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send = data[4]; // YZ
-
+		/* PGN */
+		j1939->from_other_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
 
 		/* Send CTS */
 		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 		j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = data[4]; // YZ- was 1
+		j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
 		j1939->this_ecu_tp_cm.next_packet_number_transmitted = 1;
 		j1939->this_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
 		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
@@ -69,6 +71,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		if(j1939->from_other_ecu_tp_cm.from_ecu_address != SA) // Checking if this CTS source is from the same dest we set, OR from BAM address
 			return;
 
+		// The PGN inside the incoming CTS is ignored since we don't expect a different PGN from the active session source
 		j1939->from_other_ecu_tp_cm.number_of_packets_to_be_transmitted = data[1];
 		j1939->from_other_ecu_tp_cm.next_packet_number_transmitted = data[2];
 
@@ -83,7 +86,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
 		break;
 	case CONTROL_BYTE_TP_CM_BAM:
-		//cuurently BAM is not supported
+		//currently BAM is not supported
 		//j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
 		//j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
 		//SAE_J1939_Send_Transport_Protocol_Data_Transfer(j1939, SA);
@@ -93,9 +96,9 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		if(j1939->from_other_ecu_tp_cm.from_ecu_address != SA) // Checking if this abort source address is from the same dest we set
 			return;
 	    /* Peer aborted -- tear down both directions and clear busy flags */
-	    //memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-	    //memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
-		  j1939->this_ecu_tp_cm.total_message_size_being_transmitted = 0; //just in case
+	    memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+	    memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+		j1939->this_ecu_tp_cm.total_message_size_being_transmitted = 0; //just in case
 	    j1939->tp_rx_busy = 0;
 	    j1939->tp_tx_busy = 0;
 	    j1939->timeoutType = 0;
@@ -144,7 +147,6 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		j1939->tp_tx_busy = 1;
 		break;
 	case CONTROL_BYTE_TP_CM_CTS:
-		j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
 		data[1] = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
 		data[2] = j1939->this_ecu_tp_cm.next_packet_number_transmitted;
 		data[3] = 0xFF; 															/* Reserved */

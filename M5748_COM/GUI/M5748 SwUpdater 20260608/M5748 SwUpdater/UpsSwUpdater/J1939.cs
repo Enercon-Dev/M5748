@@ -221,6 +221,7 @@ namespace M5748SwUpdater
         {
             running = false;
             rxThread?.Join();
+            
             PCANBasic.Uninitialize(Channel);
         }
 
@@ -348,51 +349,53 @@ namespace M5748SwUpdater
 
                     lock (txLock)
                     {
+
                         requestedSeq = ctsNextSeq;
                         packetsToSend = ctsPacketsToSend;
                         if (packetsToSend == 0)
                             continue;   // CTS(0,...) means "hold" -- loop back to wait for next CTS under T4
-                    }
 
-                    if (requestedSeq == 0 || requestedSeq > totalPackets)
-                        throw new Exception($"Invalid CTS sequence {requestedSeq}");
 
-                    /*
-                     * CTS may request a sequence number earlier than the
-                     * packet we currently consider sent.
-                     *
-                     * Example:
-                     *
-                     * sentPackets = 4
-                     * CTS nextSeq = 3
-                     *
-                     * => retransmit packet 3
-                     */
+                        if (requestedSeq == 0 || requestedSeq > totalPackets)
+                            throw new Exception($"Invalid CTS sequence {requestedSeq}");
 
-                    if (requestedSeq - 1 < sentPackets)
-                    {
-                        Console.WriteLine(
-                            $"CTS retransmission request: seq={requestedSeq}");
-                    }
+                        /*
+                         * CTS may request a sequence number earlier than the
+                         * packet we currently consider sent.
+                         *
+                         * Example:
+                         *
+                         * sentPackets = 4
+                         * CTS nextSeq = 3
+                         *
+                         * => retransmit packet 3
+                         */
 
-                    /*
-                     * Normal forward transmission.
-                     */
+                        if (requestedSeq - 1 < sentPackets)
+                        {
+                            Console.WriteLine(
+                                $"CTS retransmission request: seq={requestedSeq}");
+                        }
 
-                    sentPackets = requestedSeq - 1;
+                        /*
+                         * Normal forward transmission.
+                         */
 
-                    for (int i = 0; i < packetsToSend && sentPackets < totalPackets; i++)
-                    {
-                        byte seq = (byte)(sentPackets + 1);
+                        sentPackets = requestedSeq - 1;
 
-                        // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
-                   
+                        for (int i = 0; i < packetsToSend && sentPackets < totalPackets; i++)
+                        {
+                            byte seq = (byte)(sentPackets + 1);
 
-                        SendTpDataPacket( seq,currentTransmitData, currentTransmitLength);
-                        txNextSequence = seq + 1;
-                        sentPackets++;
+                            // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
 
-                        Thread.Sleep(2);
+
+                            SendTpDataPacket(seq, currentTransmitData, currentTransmitLength);
+                            txNextSequence = seq + 1;
+                            sentPackets++;
+
+                            Thread.Sleep(2);
+                        }
                     }
                 }
 
@@ -404,7 +407,7 @@ namespace M5748SwUpdater
                  * We still need to receive the EndOfMsgACK.
                  */
 
-                Console.WriteLine("All TP.DT packets transmitted. Waiting for EOM ACK.");
+                Console.WriteLine("All TP.DT packets transmitted. Waiting for EOM ACK OR Retransmit CTS.");
 
                 if (!eomEvent.WaitOne(TP_T3_MS))
                 {
@@ -699,11 +702,12 @@ namespace M5748SwUpdater
                                 Console.WriteLine(
                                    $"Retransmitted package={requestedSequence}");
                                 requestedSequence++;
-                                //ctsEvent.Set();
+                               
                             }
                             requestedSequence = 1;
                             retransmission = false;
                             txNextSequence = 1;
+                            //ctsEvent.Set();
                             return;
                         }
                         else
@@ -724,6 +728,7 @@ namespace M5748SwUpdater
                         return;
                     eomEvent.Set();
                     txNextSequence = 1;
+                    ctsNextSeq = 1;
 
 
                 }

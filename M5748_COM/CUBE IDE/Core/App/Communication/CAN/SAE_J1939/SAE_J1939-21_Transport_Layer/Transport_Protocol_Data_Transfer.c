@@ -38,7 +38,12 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 		if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1) // valid package, save it
 			{
 				validPackageCounter++;
+				if(validPackageCounter == 11)
+				{
+					int a = 10;
+					a = 20;
 
+				}
 			}
 			else
 			{
@@ -64,7 +69,7 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	else
 	{
 		validPackageCounter = 1;
-		j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
+		//j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
 	}
 
 
@@ -72,16 +77,21 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 
 
 	/* Our message are complete - Build it and call it complete_data[total_message_size] */
-	if(j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == j1939->from_other_ecu_tp_dt.packets_in_current_window)
+	if(j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted == j1939->from_other_ecu_tp_dt.sequence_number)
 	{
 		if(missingPackageCounter != 0)
 			{
 				missingPackageCounter--;
 				j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 				j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted -  missingPackageIndex[missingPackageCounter] + 1  ;
-				j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted - 1 ;
+				j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted  ;
 				validPackageCounter = missingPackageIndex[missingPackageCounter] - 1;
 				j1939->this_ecu_tp_cm.next_packet_number_transmitted = missingPackageIndex[missingPackageCounter];
+				if(j1939->this_ecu_tp_cm.next_packet_number_transmitted == 10)
+				{
+					int a = 10;
+					a++;
+				}
 				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
 				j1939->from_other_ecu_tp_dt.packets_in_current_window =  missingPackageIndex[missingPackageCounter] - 1 ;
 				missingPackageIndex[missingPackageCounter] = 0;
@@ -89,6 +99,8 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 			    j1939->timeoutType = 2;
 				return;
 			}
+
+
 
 
 
@@ -120,8 +132,11 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 		j1939->this_ecu_tp_cm.total_number_of_bytes_received = j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted;
 		j1939->this_ecu_tp_cm.total_number_of_packages_received = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;
 		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
+		j1939->this_ecu_tp_cm.next_packet_number_transmitted = 1;
 		validPackageCounter = 1;
 		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
+		memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+		memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
 	//}
 	/* Check what type of function that message want this ECU to do */
 	switch (PGN) {
@@ -175,8 +190,9 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	    {
 	    	j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 	    	j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
+
 	    	j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-			j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
+			j1939->this_ecu_tp_dt.remaining_packages = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send; // YZ
 	    	SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
 	    	j1939->timer = J1939_T2_mSEC;
 	    	j1939->timeoutType = 2;

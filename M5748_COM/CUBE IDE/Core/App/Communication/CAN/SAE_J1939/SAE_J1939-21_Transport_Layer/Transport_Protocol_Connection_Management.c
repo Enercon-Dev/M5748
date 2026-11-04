@@ -43,7 +43,6 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		  j1939->tp_rx_busy = 0;
 			return;
 		}
-		memset(j1939->from_other_ecu_tp_dt.received_flags, 0,sizeof(j1939->from_other_ecu_tp_dt.received_flags));
 	    j1939->from_other_ecu_tp_dt.retransmit_cts_count = 0;
 		j1939->tp_rx_busy = 1;
 		j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted = data[3];
@@ -63,6 +62,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		j1939->isTimerCounting = 1;
 		j1939->timer = J1939_T2_mSEC; // start counting T2
 		j1939->timeoutType = 2;
+		j1939->this_ecu_tp_dt.retransmit_cts_count = 0;
 		break;
 
 	case CONTROL_BYTE_TP_CM_CTS:
@@ -165,6 +165,7 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		data[4] = 0xFF; 															/* Reserved */
 		j1939->tp_rx_busy = 0;
 		j1939->isTimerCounting = 0;
+		j1939->this_ecu_tp_dt.retransmit_cts_count = 0;
 	}
 	
 	/* PGN */

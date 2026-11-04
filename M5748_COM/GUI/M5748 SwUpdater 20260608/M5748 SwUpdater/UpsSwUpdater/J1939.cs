@@ -910,8 +910,7 @@ namespace M5748SwUpdater
 
             RxState.RemainingPackets = RxState.MaxPackets;
 
-            Console.WriteLine(
-                $"Sending CTS: allow={data[1]} next={data[2]}");
+            Console.WriteLine( $"Sending CTS: allow={data[1]} next={data[2]}");
 
             //Thread.Sleep(TP_T3_MS + 50); //DEBUG - test T3 timeout MCU
             SendCan(TP_CM, data);

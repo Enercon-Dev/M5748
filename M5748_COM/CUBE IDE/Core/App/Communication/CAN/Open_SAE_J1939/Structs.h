@@ -33,7 +33,7 @@
 #ifndef MAX_PROPRIETARY_B_PGNS
 #define MAX_PROPRIETARY_B_PGNS 2U					/* The maximum number of PGNs that the ECUs will be aware of. 
 													 * If proprietary B PGNs are not used, set this to 0 to save memory */
-
+#define MAX_RETRANSMIT_ATTEMPTS 2
 #define PGN_ALPS_STATUS1         0xFFA0
 #define PGN_ALPS_ANALOG_STATUS  0xFFA1
 #endif

@@ -33,17 +33,11 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 	j1939->from_other_ecu_tp_dt.from_ecu_address = SA;
 	uint8_t i, j, index = data[0] - 1;
 	j1939->from_other_ecu_tp_dt.sequence_number = data[0];
-	if(validPackageCounter != j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
-	{
+
 		if (j1939->from_other_ecu_tp_dt.sequence_number == j1939->from_other_ecu_tp_dt.packets_in_current_window + 1) // valid package, save it
 			{
 				validPackageCounter++;
-				if(validPackageCounter == 11)
-				{
-					int a = 10;
-					a = 20;
 
-				}
 			}
 			else
 			{
@@ -62,11 +56,11 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 			j1939->timeoutType = 1;
 		    j1939->this_ecu_tp_dt.remaining_packages--;
 
-		    if(validPackageCounter == j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
-		    	j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
+//		    if(validPackageCounter == j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
+//		    	j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
 
-	}
-	else
+
+	if(validPackageCounter >= j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted ) // in case of a package retransmit, checking if we got all expected packages properly
 	{
 		validPackageCounter = 1;
 		//j1939->from_other_ecu_tp_dt.packets_in_current_window = j1939->from_other_ecu_tp_cm.number_of_packages_being_transmitted;  // if so we point to the end of the window and complete the message
@@ -87,11 +81,6 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 				j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted  ;
 				validPackageCounter = missingPackageIndex[missingPackageCounter] - 1;
 				j1939->this_ecu_tp_cm.next_packet_number_transmitted = missingPackageIndex[missingPackageCounter];
-				if(j1939->this_ecu_tp_cm.next_packet_number_transmitted == 10)
-				{
-					int a = 10;
-					a++;
-				}
 				SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939,j1939->from_other_ecu_tp_dt.from_ecu_address);
 				j1939->from_other_ecu_tp_dt.packets_in_current_window =  missingPackageIndex[missingPackageCounter] - 1 ;
 				missingPackageIndex[missingPackageCounter] = 0;
@@ -135,8 +124,8 @@ void SAE_J1939_Read_Transport_Protocol_Data_Transfer(J1939 *j1939, uint8_t SA, u
 		j1939->this_ecu_tp_cm.next_packet_number_transmitted = 1;
 		validPackageCounter = 1;
 		SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, SA);
-		memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
-		memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
+	//	memset(&j1939->from_other_ecu_tp_dt, 0, sizeof(j1939->from_other_ecu_tp_dt));
+	//	memset(&j1939->from_other_ecu_tp_cm, 0, sizeof(j1939->from_other_ecu_tp_cm));
 	//}
 	/* Check what type of function that message want this ECU to do */
 	switch (PGN) {

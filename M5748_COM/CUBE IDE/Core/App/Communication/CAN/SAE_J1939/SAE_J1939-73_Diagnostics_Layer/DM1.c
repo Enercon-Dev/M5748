@@ -37,6 +37,8 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Response_Request_DM1(J1939* j1939, uint8_t DA)
 		data[7] = 0xFF;													/* Reserved */
 		return CAN_Send_Message(ID, data);
 	} else {
+		if(j1939->tp_rx_busy || j1939->tp_tx_busy)
+				return STATUS_SEND_BUSY;
 		/* Multiple messages - Load data */
 		j1939->this_ecu_tp_cm.total_message_size_being_transmitted = (j1939->this_dm.errors_dm1_active *4) +2 ;				/* set total message size where each DTC is 4 btyes, plus 2 bytes for the lamp code */
 		j1939->this_ecu_tp_cm.number_of_packages_being_transmitted = SAE_J1939_Transport_Protocol_GetNumberOfPackages(j1939->this_ecu_tp_cm.total_message_size_being_transmitted);

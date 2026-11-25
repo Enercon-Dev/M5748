@@ -76,7 +76,8 @@ struct TP_CM {
 struct TP_DT {
 	uint8_t sequence_number;						/* When this sequence number is the same as number_of_packages from TP_CM, then we have our complete message */
 	uint8_t data[MAX_TP_DT];						/* This is the collected data we are going to send. Also we are using this as a filler */
-	uint16_t remaining_packages;
+	//uint16_t remaining_packages;
+	  uint8_t last_window_packet;         /* the index of the last packet in the current window */
 	uint8_t from_ecu_address;						/* From which ECU came this message */
 	uint8_t cts_window_size;
 	uint8_t packets_in_current_window;

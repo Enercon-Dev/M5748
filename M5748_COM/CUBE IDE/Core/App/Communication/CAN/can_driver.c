@@ -112,13 +112,14 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 	if(j1939->tp_rx_busy == 1 || j1939->tp_tx_busy == 1)
 	{
 		if (j1939->timer > J1939_MAX_TIMEOUT)
-			j1939->timer = J1939_MAX_TIMEOUT;
-		else if (j1939->timer > 0)
-			j1939->timer--;
+      j1939->timer = J1939_MAX_TIMEOUT;
+    else if (j1939->timer > 0)
+      j1939->timer--;
     
 		if(j1939->timer <= 0)
 		{
-			if (j1939->timeoutType == 5 && j1939->pendingResumeCts)
+			/* //should be modified to send CTS on T1 timeout
+      if (j1939->timeoutType == 5 && j1939->pendingResumeCts)
 			{
         // Send the follow-up real CTS now
 			  j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
@@ -134,14 +135,14 @@ void SAE_J1939_TP_Timeout_Task(J1939 *j1939) // for j1939 timeouts during tp
 			  j1939->timeoutType = 2;
 			  return;
 			}
-		  else
+		  else*/
 		  {
-			  if(j1939->this_ecu_tp_dt.retransmit_cts_count < MAX_RETRANSMIT_ATTEMPTS)
+			  if(j1939->timeoutType == 1 && j1939->this_ecu_tp_dt.retransmit_cts_count < MAX_RETRANSMIT_ATTEMPTS)
 			  {
 				  j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 				  j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send;
 				  j1939->this_ecu_tp_cm.next_packet_number_transmitted = j1939->from_other_ecu_tp_dt.packets_in_current_window + 1;
-				  j1939->this_ecu_tp_dt.remaining_packages = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send; // YZ
+				  //j1939->this_ecu_tp_dt.remaining_packages = j1939->from_other_ecu_tp_cm.max_number_of_packages_to_send; // YZ
 				  SAE_J1939_Send_Transport_Protocol_Connection_Management(j1939, j1939->from_other_ecu_tp_dt.from_ecu_address);
 				  j1939->timer = J1939_T2_mSEC;
 				  j1939->timeoutType = 2;

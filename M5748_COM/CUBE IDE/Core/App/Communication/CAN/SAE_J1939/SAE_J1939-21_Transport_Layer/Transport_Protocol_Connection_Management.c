@@ -32,8 +32,7 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 
 
 		/* Source address */
-			j1939->from_other_ecu_tp_cm.from_ecu_address = SA;
-		//j1939->sendCtsHold = 1; // debug - test T4 C#
+    j1939->from_other_ecu_tp_cm.from_ecu_address = SA;
 		j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted = (data[2] << 8) | data[1];
 		if(j1939->from_other_ecu_tp_cm.total_message_size_being_transmitted > MAX_TP_DT )
 		{
@@ -53,7 +52,8 @@ void SAE_J1939_Read_Transport_Protocol_Connection_Management(J1939 *j1939, uint8
 		/* Send CTS */
 		j1939->this_ecu_tp_cm.control_byte = CONTROL_BYTE_TP_CM_CTS;
 		j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted = data[4]; // YZ- was 1
-		j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
+		//j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
+    j1939->this_ecu_tp_dt.last_window_packet =  0 + j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
 		j1939->this_ecu_tp_cm.next_packet_number_transmitted = 1;
 		j1939->this_ecu_tp_cm.PGN_of_the_packeted_message = (data[7] << 16) | (data[6] << 8) | data[5];
 		j1939->from_other_ecu_tp_dt.packets_in_current_window = 0;
@@ -147,10 +147,14 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Send_Transport_Protocol_Connection_Management(
 		j1939->tp_tx_busy = 1;
 		break;
 	case CONTROL_BYTE_TP_CM_CTS:
+		//j1939->this_ecu_tp_dt.remaining_packages = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted; // YZ
+    j1939->this_ecu_tp_dt.last_window_packet =  j1939->this_ecu_tp_cm.next_packet_number_transmitted - 1 + j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
 		data[1] = j1939->this_ecu_tp_cm.number_of_packets_to_be_transmitted;
 		data[2] = j1939->this_ecu_tp_cm.next_packet_number_transmitted;
 		data[3] = 0xFF; 															/* Reserved */
 		data[4] = 0xFF; 															/* Reserved */
+    j1939->timer = J1939_T2_mSEC;
+	  j1939->timeoutType = 2;
 		break;
 	case CONTROL_BYTE_TP_CM_BAM:
 		data[1] = j1939->this_ecu_tp_cm.total_message_size_being_transmitted;

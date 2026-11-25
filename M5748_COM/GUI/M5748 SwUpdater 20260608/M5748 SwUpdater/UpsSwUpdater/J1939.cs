@@ -338,7 +338,7 @@ namespace M5748SwUpdater
                         //string phase = (sentPackets >= totalPackets) ? "T3 (EOM_ACK)" :
                         //                lastCtsWasHold ? "T4 (hold)" : "T2 (CTS)";
                         Console.WriteLine("T3 (CTS) timeout, no link established");
-                        // SendAbort(DestinationAddress, pgn, 3 /* timeout */);
+                       //  SendAbort(DestinationAddress, pgn, 3 /* timeout */);
                         lock (txLock) { tpTxActive = false; }
                         return;
                         throw new Exception("T3 (CTS) timeout ");
@@ -390,8 +390,10 @@ namespace M5748SwUpdater
                             // Thread.Sleep(TP_T2_MS + 50); // DEBUG: TEST T2 MCU
 
 
-                            SendTpDataPacket(seq, currentTransmitData, currentTransmitLength);
                             txNextSequence = seq + 1;
+                            SendTpDataPacket(seq, currentTransmitData, currentTransmitLength);
+                            //if (txNextSequence >= totalPackets + 1)
+                            //    txNextSequence = 1;
                             sentPackets++;
 
                             Thread.Sleep(2);
@@ -431,7 +433,7 @@ namespace M5748SwUpdater
             }
         }
 
-        public byte DebugSkipSeq = 5;        // 0 = disabled, else the seq to skip once
+        public byte DebugSkipSeq = 6;        // 0 = disabled, else the seq to skip once
         private bool debugSkipFlag = false;
         private void SendTpDataPacket(byte sequence, byte[] data, int length)
         {
@@ -696,12 +698,13 @@ namespace M5748SwUpdater
                         {
                             Console.WriteLine(
                                    $"CTS indicates missing packets -> retransmit from seq={requestedSequence}");
-                            for (int i = 0; i < requestedPackets; i++)
+                            for (int i = 0; i < requestedPackets ; i++)
                             {
                                 SendTpDataPacket(requestedSequence, currentTransmitData, currentTransmitLength);
-                                Console.WriteLine(
-                                   $"Retransmitted package={requestedSequence}");
+                                Console.WriteLine($"Retransmitted package={requestedSequence}");
                                 requestedSequence++;
+                                if (requestedSequence > currentTransmitTotalPackets)
+                                    break;
                                
                             }
                             requestedSequence = 1;

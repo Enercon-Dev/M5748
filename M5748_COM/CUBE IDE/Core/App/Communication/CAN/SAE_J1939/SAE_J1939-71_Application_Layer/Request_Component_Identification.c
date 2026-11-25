@@ -41,6 +41,8 @@ ENUM_J1939_STATUS_CODES SAE_J1939_Response_Request_Component_Identification(J193
 		return CAN_Send_Message(ID, data);
 	} else {
 		/* Multiple messages - Load data */
+		if(j1939->tp_rx_busy || j1939->tp_tx_busy)
+				return STATUS_SEND_BUSY;
 		j1939->this_ecu_tp_cm.total_message_size_being_transmitted = 0;
 		uint8_t i;
 		for(i = 0; i < length_of_each_field; i++) {
